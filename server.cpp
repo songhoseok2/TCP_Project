@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <algorithm>
 #include <WS2tcpip.h>
 #pragma comment (lib, "ws2_32.lib")
 
@@ -30,6 +31,8 @@ void initialize_winsock()
 	{
 		exit_with_err_msg("Winsock initialization failed. Error " + to_string(ws_result) + ".");
 	}
+
+	cout << "Winsock initialization successful." << endl;
 }
 
 socket_info create_listening_socket()
@@ -42,10 +45,20 @@ socket_info create_listening_socket()
 		exit_with_err_msg("listen_socket creation failed. Error #" + to_string(WSAGetLastError()) + ".");
 	}
 
+	string listen_port_num_str;
+	cout << "Enter the port number you wish to assign for the listening socket: ";
+	while (getline(cin, listen_port_num_str))
+	{
+		bool invalid_input = any_of(listen_port_num_str.begin(), listen_port_num_str.end(), [](const char c) { return !isdigit(c); });
+		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
+		else { break; }
+	}
+	int listen_port_num = stoi(listen_port_num_str);
+
 	//setup the host_addr structure for use in bind call
 	listening_socket.sock_addr.sin_family = AF_INET;				//server byte order
 	listening_socket.sock_addr.sin_addr.S_un.S_addr = INADDR_ANY;	//automatically be filled with current host's IP address
-	listening_socket.sock_addr.sin_port = htons(54000);				//convert short integer value for port must be converted into network byte order
+	listening_socket.sock_addr.sin_port = htons(listen_port_num);				//convert short integer value for port must be converted into network byte order
 	
 	return listening_socket;
 }
@@ -85,28 +98,11 @@ socket_info connect_to_a_client(socket_info listening_socket)
 	return client_socket;
 }
 
-int main()
+void temporary_action(socket_info &client_socket)
 {
-	initialize_winsock();
-	socket_info listening_socket = create_listening_socket();
-
-	//Bind ip address and port to a socket
-	if (bind(listening_socket.sock, (sockaddr*)& listening_socket.sock_addr, sizeof(listening_socket.sock_addr)) < 0)
-	{
-		exit_with_err_msg("Binding listening socket failed.");
-	}
-
-	//listen() tells the socket to listen to the incoming connections.
-	//The listen() function places all incoming connection into a backlog queue
-	//until accept() call accepts the connection.
-	//Setting the maximum size for the backlog queue to a defined number.
-	listen(listening_socket.sock, SOMAXCONN);
-
-	socket_info client_socket = connect_to_a_client(listening_socket);
-
-	//While loop to accept and echo message back to client
+	//loop to accept and echo message back to client
 	char buff[4096];
-	for(ZeroMemory(buff, 4096); true; ZeroMemory(buff, 4096))
+	for (ZeroMemory(buff, 4096); true; ZeroMemory(buff, 4096))
 	{
 		//wait for client to send data
 		int bytes_received = recv(client_socket.sock, buff, 4096, 0);
@@ -136,6 +132,27 @@ int main()
 			break;
 		}
 	}
+}
+
+int main()
+{
+	initialize_winsock();
+	socket_info listening_socket = create_listening_socket();
+
+	//Bind ip address and port to a socket
+	if (bind(listening_socket.sock, (sockaddr*)& listening_socket.sock_addr, sizeof(listening_socket.sock_addr)) < 0)
+	{
+		exit_with_err_msg("Binding listening socket failed.");
+	}
+
+	//listen() tells the socket to listen to the incoming connections.
+	//The listen() function places all incoming connection into a backlog queue
+	//until accept() call accepts the connection.
+	//Setting the maximum size for the backlog queue to a defined number.
+	listen(listening_socket.sock, SOMAXCONN);
+
+	socket_info client_socket = connect_to_a_client(listening_socket);
+	temporary_action(client_socket);
 
 	closesocket(client_socket.sock);
 	WSACleanup();
