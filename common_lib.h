@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <algorithm>
 #include <WS2tcpip.h>
 
 using namespace std;
@@ -16,5 +17,7 @@ struct socket_info
 };
 
 void initialize_winsock();
+
+int get_port_number();
 
 #endif

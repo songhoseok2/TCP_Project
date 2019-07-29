@@ -25,3 +25,17 @@ void initialize_winsock()
 
 	cout << "Winsock initialization successful." << endl;
 }
+
+int get_port_number()
+{
+	string listen_port_num_str;
+	cout << "Enter the port number: ";
+	while (getline(cin, listen_port_num_str))
+	{
+		bool invalid_input = any_of(listen_port_num_str.begin(), listen_port_num_str.end(), [](const char c) { return !isdigit(c); });
+		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
+		else { break; }
+	}
+
+	return stoi(listen_port_num_str);
+}
