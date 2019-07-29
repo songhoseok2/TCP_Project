@@ -7,6 +7,7 @@ using namespace std;
 
 socket_info create_client_socket()
 {
+	cout << "Initializing client socket" << endl;
 	socket_info client_socket;
 	client_socket.sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (client_socket.sock == INVALID_SOCKET)
@@ -15,7 +16,7 @@ socket_info create_client_socket()
 	}
 
 	string IP_address;
-
+	cout << "Please enter the IP address of the server: ";
 	while (getline(cin, IP_address))
 	{
 		if (IP_address.empty()) { cout << "IP address is empty. Please re-enter: "; }
@@ -27,6 +28,7 @@ socket_info create_client_socket()
 	client_socket.sock_addr.sin_port = htons(port_num);
 	inet_pton(AF_INET, IP_address.c_str(), &client_socket.sock_addr.sin_addr);
 
+	cout << "client socket initialized." << endl;
 	return client_socket;
 }
 
