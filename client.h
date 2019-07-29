@@ -11,4 +11,6 @@ using namespace std;
 
 socket_info create_client_socket();
 
+void temporary_client_action(socket_info& client_socket);
+
 #endif
