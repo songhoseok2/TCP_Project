@@ -14,15 +14,8 @@ socket_info create_listening_socket()
 		exit_with_err_msg("listen_socket creation failed. Error #" + to_string(WSAGetLastError()) + ".");
 	}
 
-	string listen_port_num_str;
-	cout << "Enter the port number you wish to assign for the listening socket: ";
-	while (getline(cin, listen_port_num_str))
-	{
-		bool invalid_input = any_of(listen_port_num_str.begin(), listen_port_num_str.end(), [](const char c) { return !isdigit(c); });
-		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
-		else { break; }
-	}
-	int listen_port_num = stoi(listen_port_num_str);
+	cout << "Initializing listening socket. ";
+	int listen_port_num = get_port_number();
 
 	//setup the host_addr structure for use in bind call
 	listening_socket.sock_addr.sin_family = AF_INET;				//server byte order
