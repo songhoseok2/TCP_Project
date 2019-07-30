@@ -20,50 +20,23 @@ socket_info create_listening_socket()
 	//setup the host_addr structure for use in bind call
 	listening_socket.sock_addr.sin_family = AF_INET;				//server byte order
 	listening_socket.sock_addr.sin_addr.S_un.S_addr = INADDR_ANY;	//automatically be filled with current host's IP address
-	listening_socket.sock_addr.sin_port = htons(listen_port_num);				//convert short integer value for port must be converted into network byte order
+	listening_socket.sock_addr.sin_port = htons(listen_port_num);	//convert short integer value for port must be converted into network byte order
 	
 	return listening_socket;
 }
 
-socket_info connect_to_a_client(socket_info listening_socket)
+void print_connection_info(sockaddr_in& client)
 {
-	//Wait for connection
-	socket_info client_socket;
-	int client_size = sizeof(client_socket.sock_addr);
-	cout << "Waiting to connect to a client...";
-	client_socket.sock = accept(listening_socket.sock, (sockaddr*)& client_socket.sock_addr, &client_size);
-	cout << "Connected." << endl;
+	struct sockaddr_in* pV4Addr = (struct sockaddr_in*) & client;
+	struct in_addr ipAddr = pV4Addr->sin_addr;
+	char str[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &ipAddr, str, INET_ADDRSTRLEN);
+	int port = ntohs(client.sin_port);
 
-	if (client_socket.sock == INVALID_SOCKET)
-	{
-		exit_with_err_msg("client_socket creation failed.");
-	}
-
-	char host[NI_MAXHOST];			//Client's remote name
-	char service[NI_MAXSERV];		//Service (i.e. port) the client is connected on
-
-	ZeroMemory(host, NI_MAXHOST);	//memset(host, 0, NI_MAXHOST)
-	ZeroMemory(service, NI_MAXSERV);
-
-
-	cout << host << "connected on port ";
-	if (getnameinfo((sockaddr*)& client_socket.sock, client_size, host, NI_MAXHOST, service, NI_MAXSERV, 0) == 0)
-	{
-		cout << service << ". ";
-		cout << "getnameinfo successful.";
-	}
-	else
-	{
-		inet_ntop(AF_INET, &client_socket.sock_addr.sin_addr, host, NI_MAXHOST);
-		cout << ntohs(client_socket.sock_addr.sin_port) << ". ";
-		cout << "getnameinfo failed.";
-	}
-	cout << endl;
-
-	return client_socket;
+	cout << "-[Client IP:" << str << ", Connected on PORT:" << port << "]" << std::endl;
 }
 
-void temporary_action(socket_info &client_socket)
+void accept_requests(socket_info& client_socket, mutex& master_mutex)
 {
 	//loop to accept and echo message back to client
 	char buff[4096];
@@ -95,6 +68,77 @@ void temporary_action(socket_info &client_socket)
 		{
 			cout << "Client disconnected." << endl;
 			break;
+		}
+	}
+}
+
+//code to wait for and connect to clients real time
+void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thread> &socket_threads, socket_info& listening_socket, mutex &master_mutex)
+{
+	while (true)
+	{
+		//Wait for connection
+		socket_info client_socket;
+		int client_size = sizeof(client_socket.sock_addr);
+		//cout << "Waiting to connect to a client...";
+		client_socket.sock = accept(listening_socket.sock, (sockaddr*)& client_socket.sock_addr, &client_size);
+
+		if (client_socket.sock == INVALID_SOCKET)
+		{
+			exit_with_err_msg("client_socket creation failed.");
+		}
+
+		cout << "A client has connected.";
+		print_connection_info(client_socket.sock_addr);
+
+		char host[NI_MAXHOST];			//Client's remote name
+		char service[NI_MAXSERV];		//Service (i.e. port) the client is connected on
+
+		ZeroMemory(host, NI_MAXHOST);	//memset(host, 0, NI_MAXHOST)
+		ZeroMemory(service, NI_MAXSERV);
+
+
+		/*
+		cout << host << "connected on port ";
+		if (getnameinfo((sockaddr*)& client_socket.sock, client_size, host, NI_MAXHOST, service, NI_MAXSERV, 0) == 0)
+		{
+			cout << service << ". ";
+			cout << "getnameinfo successful.";
+		}
+		else
+		{
+			inet_ntop(AF_INET, &client_socket.sock_addr.sin_addr, host, NI_MAXHOST);
+			cout << ntohs(client_socket.sock_addr.sin_port) << ". ";
+			cout << "getnameinfo failed.";
+		}
+		cout << endl;
+		*/
+
+		master_mutex.lock();
+		connected_client_sockets.push_back(client_socket);
+		socket_threads.push_back(thread(accept_requests, ref(connected_client_sockets.back()), ref(master_mutex)));
+		master_mutex.unlock();
+	}
+}
+
+void temp_action(char& current_request)
+{
+	//do stuff
+
+
+
+	current_request = 'n';
+}
+
+void process_requests(char& current_request, mutex& master_mutex)
+{
+	while (true)
+	{
+		if (current_request != 'n')
+		{
+			master_mutex.lock();
+			temp_action(current_request);
+			master_mutex.unlock();
 		}
 	}
 }

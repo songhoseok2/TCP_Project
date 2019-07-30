@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 #include "server.h"
 #include <WS2tcpip.h>
 #pragma comment (lib, "ws2_32.lib")
@@ -8,6 +9,10 @@ using namespace std;
 
 int main()
 {
+	vector<socket_info> connected_client_sockets;
+	vector<thread> socket_threads;
+	char current_request = 'n';
+
 	initialize_winsock();
 	socket_info listening_socket = create_listening_socket();
 
@@ -22,11 +27,12 @@ int main()
 	//until accept() call accepts the connection.
 	//Setting the maximum size for the backlog queue to a defined number.
 	listen(listening_socket.sock, SOMAXCONN);
-
-	socket_info client_socket = connect_to_a_client(listening_socket);
-	temporary_action(client_socket);
-
-	closesocket(client_socket.sock);
+	mutex master_mutex; //mutex and shared data protections will be segmented properly in the future
+	thread client_connection_thread = thread(wait_for_clients, ref(connected_client_sockets), ref(socket_threads), ref(listening_socket), ref(master_mutex));
+	thread proccess_thread = thread(process_requests, ref(current_request), ref(master_mutex));
+	
+	client_connection_thread.join();
+	proccess_thread.join();
 	WSACleanup();
 
 	return 0;
