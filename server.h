@@ -14,9 +14,9 @@ using namespace std;
 
 socket_info create_listening_socket();
 
-void print_connection_info(struct sockaddr_in& client);
+void get_client_connection_info(socket_info& client_socket);
 
-void accept_requests(socket_info& client_socket, mutex& master_mutex);
+void accept_requests(int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex);
 
 void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thread>& socket_threads, socket_info& listening_socket, mutex& master_mutex);
 
