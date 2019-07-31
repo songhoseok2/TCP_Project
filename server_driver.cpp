@@ -11,7 +11,7 @@ int main()
 {
 	vector<socket_info> connected_client_sockets;
 	vector<thread> socket_threads;
-	char current_request = 'n';
+	//char current_request = 'n';
 
 	initialize_winsock();
 	socket_info listening_socket = create_listening_socket();
@@ -29,10 +29,10 @@ int main()
 	listen(listening_socket.sock, SOMAXCONN);
 	mutex master_mutex; //mutex and shared data protections will be segmented properly in the future
 	thread client_connection_thread = thread(wait_for_clients, ref(connected_client_sockets), ref(socket_threads), ref(listening_socket), ref(master_mutex));
-	thread proccess_thread = thread(process_requests, ref(current_request), ref(master_mutex));
+	//thread proccess_thread = thread(process_requests, ref(current_request), ref(master_mutex));
 	
 	client_connection_thread.join();
-	proccess_thread.join();
+	//proccess_thread.join();
 	WSACleanup();
 
 	return 0;

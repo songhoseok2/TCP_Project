@@ -29,44 +29,56 @@ void get_client_connection_info(socket_info &client_socket)
 {
 	struct sockaddr_in* pV4Addr = (struct sockaddr_in*) & client_socket.sock_addr;
 	struct in_addr ipAddr = pV4Addr->sin_addr;
-	inet_ntop(AF_INET, &ipAddr, client_socket.client_IP_address, INET_ADDRSTRLEN);
-	client_socket.client_port_num = ntohs(client_socket.sock_addr.sin_port);
+	inet_ntop(AF_INET, &ipAddr, client_socket.IP_address, INET_ADDRSTRLEN);
+	client_socket.port_num = ntohs(client_socket.sock_addr.sin_port);
 }
+
+//receive request from client
+//send request acceptance result to client
+//process request
+//send request result to client
 
 void accept_requests(int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
 {
-	//loop to accept and echo message back to client
-	char buff[4096];
-	for (ZeroMemory(buff, 4096); true; ZeroMemory(buff, 4096))
+	char request_buff[1];
+	for (ZeroMemory(request_buff, 1); true; ZeroMemory(request_buff, 1))
 	{
-		//wait for client to send data
-		int bytes_received = recv(connected_client_sockets[thread_number].sock, buff, 4096, 0);
+		//wait for client to send request
+		int bytes_received = recv(connected_client_sockets[thread_number].sock, request_buff, 1, 0);
 		if (bytes_received == SOCKET_ERROR)
 		{
-			cout << "ERROR in recv(). Exiting." << endl;
+			cout << "ERROR in receiving request from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
 			cout << "ERROR number: " << WSAGetLastError() << endl;
 			break;
 		}
 		else if (bytes_received == 0)
 		{
-			cout << "Client IP address " << connected_client_sockets[thread_number].client_IP_address << " has disconnected from port " << connected_client_sockets[thread_number].client_port_num << endl;
+			cout << "Client " << connected_client_sockets[thread_number].IP_address << " has disconnected from port " << connected_client_sockets[thread_number].port_num << endl;
 			break;
 		}
 
-		cout << "Received: " << buff << " in thread number: " << thread_number << endl;
+		cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " requested " << request_buff << "." << endl;
 		
-		//echo message back to client
-		int bytes_sent = send(connected_client_sockets[thread_number].sock, buff, bytes_received + 1, 0); //+1 cuz of the terminating \0
+		//echo request acceptance result to client
+		char request_acceptance_result_buff[1];
+		request_acceptance_result_buff[0] = 'y';
+		int bytes_sent = send(connected_client_sockets[thread_number].sock, request_acceptance_result_buff, 2, 0); //2 cuz one char + terminating null
 		if (bytes_sent == SOCKET_ERROR)
 		{
-			cout << "ERROR in send(). Exiting." << endl;
+			cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+			cout << "ERROR number: " << WSAGetLastError() << endl;
 			break;
 		}
 		else if (bytes_sent == 0)
 		{
-			cout << "Client disconnected." << endl;
+			cout << "Client " << connected_client_sockets[thread_number].IP_address << " has disconnected from port " << connected_client_sockets[thread_number].port_num << endl;
 			break;
 		}
+
+		char current_request = request_buff[0];
+		cout << current_request << " request from " << connected_client_sockets[thread_number].IP_address << " accepted. Processing." << endl;
+		process_requests(current_request, thread_number, connected_client_sockets, master_mutex);
+		//process results will be handled in each process' function
 	}
 }
 
@@ -88,7 +100,7 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thre
 		}
 
 		get_client_connection_info(client_socket);
-		cout << "Client IP address " << client_socket.client_IP_address << " has connected to port " << client_socket.client_port_num << "." << endl;
+		cout << "Client IP address " << client_socket.IP_address << " has connected to port " << client_socket.port_num << "." << endl;
 
 		master_mutex.lock();
 		connected_client_sockets.push_back(client_socket);
@@ -97,24 +109,59 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thre
 	}
 }
 
-void temp_action(char& current_request)
+void send_process_result(const char current_request, int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
 {
-	//do stuff
+	char request_result_buff[1];
+	switch (current_request)
+	{
+	case 'm':
+		request_result_buff[0] = 'p'; //processed properly
+		break;
+	}
 
-
-
-	current_request = 'n';
+	int bytes_sent = send(connected_client_sockets[thread_number].sock, request_result_buff, 2, 0); //2 cuz one char + terminating null
+	if (bytes_sent == SOCKET_ERROR)
+	{
+		cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl;
+		return;
+	}
+	else if (bytes_sent == 0)
+	{
+		cout << "Client " << connected_client_sockets[thread_number].IP_address << " has disconnected from port " << connected_client_sockets[thread_number].port_num << endl;
+		return;
+	}
 }
 
-void process_requests(char& current_request, mutex& master_mutex)
+void receive_message(int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
 {
-	while (true)
+	char msg_buff[4096];
+
+	int bytes_received = recv(connected_client_sockets[thread_number].sock, msg_buff, 4096, 0);
+	if (bytes_received == SOCKET_ERROR)
 	{
-		if (current_request != 'n')
-		{
-			master_mutex.lock();
-			temp_action(current_request);
-			master_mutex.unlock();
-		}
+		cout << "ERROR in receiving request from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl;
+		return;
 	}
+	else if (bytes_received == 0)
+	{
+		cout << "Client " << connected_client_sockets[thread_number].IP_address << " has disconnected from port " << connected_client_sockets[thread_number].port_num << endl;
+		return;
+	}
+
+	cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " messaged: \"" << msg_buff << "\"" << endl;
+
+	send_process_result('m', thread_number, connected_client_sockets, master_mutex);
+}
+
+void process_requests(const char current_request, int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
+{
+	master_mutex.lock();
+	if (current_request != 'm')
+	{
+		receive_message(thread_number, connected_client_sockets, master_mutex);
+		send_process_result(current_request, thread_number, connected_client_sockets, master_mutex);
+	}
+	master_mutex.unlock();
 }

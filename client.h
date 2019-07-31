@@ -9,8 +9,14 @@
 
 using namespace std;
 
-socket_info create_client_socket();
+socket_info create_server_socket();
 
-void temporary_client_action(socket_info& client_socket);
+void receive_request_result(socket_info& server_socket, const char current_request);
+
+bool send_request(socket_info& server_socket, const char current_request);
+
+void send_message(socket_info& server_socket);
+
+void client_requests(socket_info& server_socket);
 
 #endif

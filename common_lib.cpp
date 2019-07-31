@@ -26,6 +26,42 @@ void initialize_winsock()
 	cout << "Winsock initialization successful." << endl;
 }
 
+char get_request()
+{
+	string request_str;
+	cout << "Enter request: ";
+	while (getline(cin, request_str))
+	{
+		if (request_str.size() != 1) { cout << "ERROR: Please enter one character only: "; }
+		else if (request_str == "q" || request_str == "m") { break; }
+		else { cout << request_str << " isn't a valid request. Please re-enter: "; }
+	}
+
+	return request_str[0];
+
+}
+
+string get_message()
+{
+	string user_msg;
+	cout << "Enter message to send to server. Enter ABORT to abort." << endl;
+	cout << "Message to server: ";
+	while (getline(cin, user_msg))
+	{
+		if (user_msg.empty())
+		{
+			cout << "Message is empty. Please re-enter. Enter ABORT to abort." << endl;
+			cout << "Message to server: ";
+		}
+		else { break; }
+	}
+
+
+
+
+	return user_msg;
+}
+
 int get_port_number()
 {
 	string listen_port_num_str;

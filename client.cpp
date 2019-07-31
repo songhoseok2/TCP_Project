@@ -5,12 +5,12 @@
 
 using namespace std;
 
-socket_info create_client_socket()
+socket_info create_server_socket()
 {
-	cout << "Initializing client socket" << endl;
-	socket_info client_socket;
-	client_socket.sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (client_socket.sock == INVALID_SOCKET)
+	cout << "Initializing server socket." << endl;
+	socket_info server_socket;
+	server_socket.sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (server_socket.sock == INVALID_SOCKET)
 	{
 		exit_with_err_msg("Socket creation failed. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
@@ -24,42 +24,113 @@ socket_info create_client_socket()
 	}
 
 	int port_num = get_port_number();
-	client_socket.sock_addr.sin_family = AF_INET;
-	client_socket.sock_addr.sin_port = htons(port_num);
-	inet_pton(AF_INET, IP_address.c_str(), &client_socket.sock_addr.sin_addr);
-
-	cout << "client socket initialized." << endl;
-	return client_socket;
+	server_socket.sock_addr.sin_family = AF_INET;
+	server_socket.sock_addr.sin_port = htons(port_num);
+	inet_pton(AF_INET, IP_address.c_str(), &server_socket.sock_addr.sin_addr);
+	inet_pton(AF_INET, IP_address.c_str(),server_socket.IP_address);
+	server_socket.port_num = port_num;
+	cout << "Server socket initialized." << endl;
+	return server_socket;
 }
 
-void temporary_client_action(socket_info &client_socket)
+bool send_request(socket_info& server_socket, const char request)
 {
-	//While loop to send and receive data
-	char buffer[4096];
-	string user_input;
-
-	do
+	char request_buff[1];
+	request_buff[0] = request;
+	int send_result = send(server_socket.sock, request_buff, 2, 0); //2 cuz one char + terminating null
+	if (send_result == SOCKET_ERROR)
 	{
-		//Prompt the user for some text
-		cout << "Enter message: ";
-		getline(cin, user_input);
+		exit_with_err_msg("Error in sending request to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+		return false;
+	}
+	else
+	{
+		//Wait for request_acceptance_result from server
+		char request_acceptance_result_buff[1];
+		ZeroMemory(request_acceptance_result_buff, 1);
+		int bytes_received = recv(server_socket.sock, request_acceptance_result_buff, 1, 0);
 
-		if (user_input.size() > 0)
+		if (bytes_received < 0)
 		{
-			//Send the text
-			int send_result = send(client_socket.sock, user_input.c_str(), int(user_input.size() + 1), 0);
-			if (send_result != SOCKET_ERROR)
+			exit_with_err_msg("Error in receiving request acceptance result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+		}
+		else
+		{
+			cout << "DEBUG: bytes_received: " << bytes_received << endl;
+			cout << "DEBUG: request_acceptance_result_buff: " << request_acceptance_result_buff << endl;
+			string request_acceptance_result = string(request_acceptance_result_buff, 0, bytes_received);
+			cout << "DEBUG: request_acceptance_result: " << request_acceptance_result << endl;
+			if (request_acceptance_result == "y")
 			{
-				//Wait for response
-				ZeroMemory(buffer, 4096);
-				int bytes_received = recv(client_socket.sock, buffer, 4096, 0);
-				if (bytes_received > 0)
-				{
-					//Echo response to console
-					cout << "SERVER: " << string(buffer, 0, bytes_received) << endl;
-				}
+				cout << "Server accepted the request of " << request << "." << endl;
+				return true;
+			}
+			else
+			{
+				cout << "Server denied the request of " << request << "." << endl;
+				return false;
+			}		
+		}
+	}
+
+	exit_with_err_msg("Error in send_request function. Exiting.");
+	return false;
+}
+
+void send_message(socket_info &server_socket)
+{
+	char msg_buff[4096];
+	string user_msg = get_message();
+	strcpy_s(msg_buff, user_msg.c_str());
+	if (user_msg == "ABORT")
+	{
+		return;
+	}
+	else
+	{
+		//Send the message
+		int send_result = send(server_socket.sock, msg_buff, 4096 + 1, 0);
+		if (send_result == SOCKET_ERROR)
+		{
+			exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+		}
+		else
+		{
+			cout << "Message successfully sent to server." << endl;
+		}
+	}
+}
+
+void receive_request_result(socket_info& server_socket, const char current_request)
+{
+	//Wait for response
+	char request_result_buff[1];
+	ZeroMemory(request_result_buff, 1);
+	int bytes_received = recv(server_socket.sock, request_result_buff, 1, 0);
+
+	if (bytes_received < 0)
+	{
+		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+	else
+	{
+		//Echo response to console
+		cout << "SERVER: " << string(request_result_buff, 0, bytes_received) << endl;
+	}
+}
+
+void client_requests(socket_info& server_socket)
+{
+	for (char request = get_request(); request != 'q'; request = get_request())
+	{
+		bool request_acceptance_result = send_request(server_socket, request);
+		if (request_acceptance_result)
+		{
+			if (request == 'm')
+			{
+				send_message(server_socket);
+				receive_request_result(server_socket, 'm');
 			}
 		}
-
-	} while (user_input.size() > 0);
+	}
 }

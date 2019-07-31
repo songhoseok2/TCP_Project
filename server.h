@@ -20,8 +20,10 @@ void accept_requests(int thread_number, vector<socket_info>& connected_client_so
 
 void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thread>& socket_threads, socket_info& listening_socket, mutex& master_mutex);
 
-void temp_action(char& current_request);
+void send_process_result(const char current_request, int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex);
 
-void process_requests(char& current_request, mutex& master_mutex);
+void receive_message(int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex);
+
+void process_requests(const char current_request, int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex);
 
 #endif

@@ -14,11 +14,15 @@ struct socket_info
 {
 	SOCKET sock;
 	sockaddr_in sock_addr;
-	char client_IP_address[INET_ADDRSTRLEN];
-	int client_port_num;
+	char IP_address[INET_ADDRSTRLEN];
+	int port_num;
 };
 
 void initialize_winsock();
+
+char get_request();
+
+string get_message();
 
 int get_port_number();
 

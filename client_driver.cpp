@@ -11,18 +11,20 @@ int main()
 	initialize_winsock();
 
 	//Create socket
-	socket_info client_socket = create_client_socket();
+	socket_info server_socket = create_server_socket();
 
 	//Connect to server
-	int connection_result = connect(client_socket.sock, (sockaddr*)& client_socket.sock_addr, sizeof(client_socket.sock_addr));
+	int connection_result = connect(server_socket.sock, (sockaddr*)& server_socket.sock_addr, sizeof(server_socket.sock_addr));
 	if (connection_result == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Connection to server failed. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 
-	temporary_client_action(client_socket);
+	client_requests(server_socket);
 
-	closesocket(client_socket.sock);
+	cout << "Closing client." << endl;
+
+	closesocket(server_socket.sock);
 	WSACleanup();
 
 	return 0;
