@@ -35,9 +35,10 @@ socket_info create_server_socket()
 
 bool send_request(socket_info& server_socket, const char request)
 {
-	char request_buff[1];
-	request_buff[0] = request;
-	int send_result = send(server_socket.sock, request_buff, 2, 0); //2 cuz one char + terminating null
+	char request_buff[2];
+	request_buff[0]= request;
+	request_buff[1] = '\0';
+	int send_result = send(server_socket.sock, request_buff, sizeof(request_buff) , 0); //2 cuz one char + terminating null
 	if (send_result == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Error in sending request to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
@@ -46,10 +47,9 @@ bool send_request(socket_info& server_socket, const char request)
 	else
 	{
 		//Wait for request_acceptance_result from server
-		char request_acceptance_result_buff[1];
-		ZeroMemory(request_acceptance_result_buff, 1);
-		int bytes_received = recv(server_socket.sock, request_acceptance_result_buff, 1, 0);
-
+		char request_acceptance_result_buff[2];
+		ZeroMemory(request_acceptance_result_buff, 2);
+		int bytes_received = recv(server_socket.sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff), 0);
 		if (bytes_received < 0)
 		{
 			exit_with_err_msg("Error in receiving request acceptance result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
@@ -89,8 +89,8 @@ void send_message(socket_info &server_socket)
 	else
 	{
 		//Send the message
-		int send_result = send(server_socket.sock, msg_buff, 4096 + 1, 0);
-		if (send_result == SOCKET_ERROR)
+		int send_msg_result = send(server_socket.sock, msg_buff, sizeof(msg_buff) , 0);
+		if (send_msg_result == SOCKET_ERROR)
 		{
 			exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 		}
@@ -104,10 +104,9 @@ void send_message(socket_info &server_socket)
 void receive_request_result(socket_info& server_socket, const char current_request)
 {
 	//Wait for response
-	char request_result_buff[1];
-	ZeroMemory(request_result_buff, 1);
-	int bytes_received = recv(server_socket.sock, request_result_buff, 1, 0);
-
+	char request_result_buff[2];
+	ZeroMemory(request_result_buff, 2);
+	int bytes_received = recv(server_socket.sock, request_result_buff, sizeof(request_result_buff), 0);
 	if (bytes_received < 0)
 	{
 		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
