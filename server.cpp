@@ -121,7 +121,7 @@ void send_process_result(const char current_request, int thread_number, vector<s
 		break;
 	}
 
-	int bytes_sent = send(connected_client_sockets[thread_number].sock, request_result_buff, size(request_result_buff) , 0); //2 cuz one char + terminating null
+	int bytes_sent = send(connected_client_sockets[thread_number].sock, request_result_buff, size(request_result_buff) , 0);
 	if (bytes_sent == SOCKET_ERROR)
 	{
 		cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;

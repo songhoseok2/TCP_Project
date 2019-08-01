@@ -38,7 +38,7 @@ bool send_request(socket_info& server_socket, const char request)
 	char request_buff[2];
 	request_buff[0]= request;
 	request_buff[1] = '\0';
-	int send_result = send(server_socket.sock, request_buff, sizeof(request_buff) , 0); //2 cuz one char + terminating null
+	int send_result = send(server_socket.sock, request_buff, sizeof(request_buff) , 0);
 	if (send_result == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Error in sending request to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");

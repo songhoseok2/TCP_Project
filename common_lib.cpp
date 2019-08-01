@@ -70,6 +70,7 @@ int get_port_number()
 	{
 		bool invalid_input = any_of(listen_port_num_str.begin(), listen_port_num_str.end(), [](const char c) { return !isdigit(c); });
 		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
+		else if (listen_port_num_str.empty()) { cout << "Input is empty. Please re-enter: "; }
 		else { break; }
 	}
 
