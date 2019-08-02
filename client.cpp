@@ -56,10 +56,7 @@ bool send_request(socket_info& server_socket, const char request)
 		}
 		else
 		{
-			cout << "DEBUG: bytes_received: " << bytes_received << endl;
-			cout << "DEBUG: request_acceptance_result_buff: " << request_acceptance_result_buff << endl;
 			string request_acceptance_result = string(request_acceptance_result_buff, 0, bytes_received);
-			cout << "DEBUG: request_acceptance_result: " << request_acceptance_result << endl;
 			if (request_acceptance_result == "y")
 			{
 				cout << "Server accepted the request of " << request << "." << endl;
@@ -113,8 +110,7 @@ void receive_request_result(socket_info& server_socket, const char current_reque
 	}
 	else
 	{
-		//Echo response to console
-		cout << "SERVER: " << string(request_result_buff, 0, bytes_received) << endl;
+		cout << "Server process result: " << string(request_result_buff, 0, bytes_received) << endl;
 	}
 }
 
