@@ -98,7 +98,7 @@ void send_message(socket_info &server_socket)
 	}
 }
 
-void receive_request_result(socket_info& server_socket, const char current_request)
+void receive_process_result(socket_info& server_socket, const char current_request)
 {
 	//Wait for response
 	char request_result_buff[2];
@@ -108,9 +108,9 @@ void receive_request_result(socket_info& server_socket, const char current_reque
 	{
 		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
-	else
+	else if(string(request_result_buff, 0, bytes_received) == "s")
 	{
-		cout << "Server process result: " << string(request_result_buff, 0, bytes_received) << endl;
+		cout << "Server successfully received message." << endl;
 	}
 }
 
@@ -118,13 +118,24 @@ void client_requests(socket_info& server_socket)
 {
 	for (char request = get_request(); request != 'q'; request = get_request())
 	{
-		bool request_acceptance_result = send_request(server_socket, request);
-		if (request_acceptance_result)
+		if (send_request(server_socket, request)) //if request is accepted by server
 		{
 			if (request == 'm')
 			{
 				send_message(server_socket);
-				receive_request_result(server_socket, 'm');
+				receive_process_result(server_socket, 'm');
+			}
+			else if (request == 'r')
+			{
+
+			}
+			else if (request == 'u')
+			{
+
+			}
+			else
+			{
+				cout << "ERROR: Request " << request << " isn't a valid request. Please re-enter." << endl;
 			}
 		}
 	}

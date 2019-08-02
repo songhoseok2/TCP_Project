@@ -18,6 +18,12 @@ struct socket_info
 	int port_num;
 };
 
+struct bank_account
+{
+	string account_holder;
+	double balance;
+};
+
 void initialize_winsock();
 
 char get_request();

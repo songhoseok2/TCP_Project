@@ -11,7 +11,7 @@ using namespace std;
 
 socket_info create_server_socket();
 
-void receive_request_result(socket_info& server_socket, const char current_request);
+void receive_process_result(socket_info& server_socket, const char current_request);
 
 bool send_request(socket_info& server_socket, const char current_request);
 
