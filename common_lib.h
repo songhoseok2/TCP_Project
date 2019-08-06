@@ -6,9 +6,16 @@
 #include <algorithm>
 #include <WS2tcpip.h>
 
+#define NUMMEMORY 10000
+#define CACHELINE 50
+#define CACHETAG 5
+#define CACHESET 250
+
 using namespace std;
 
 void exit_with_err_msg(const string msg);
+
+struct is_char { bool operator()(char c); };
 
 struct socket_info
 {
@@ -18,10 +25,16 @@ struct socket_info
 	int port_num;
 };
 
-struct bank_account
+struct cache_tag
 {
-	string account_holder;
-	double balance;
+	double cache_lines[CACHELINE];
+};
+
+struct account_cache_set
+{
+	int dirty;
+	int LRU;
+	cache_tag tags[CACHETAG];
 };
 
 void initialize_winsock();

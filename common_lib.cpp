@@ -12,6 +12,8 @@ void exit_with_err_msg(const string msg)
 	exit(1);
 }
 
+bool is_char::operator()(char c) { return !isdigit(c); }
+
 void initialize_winsock()
 {
 	WSADATA wsData;
@@ -47,20 +49,17 @@ char get_request()
 string get_message()
 {
 	string user_msg;
-	cout << "Enter message to send to server. Enter ABORT to abort." << endl;
+	cout << "Enter message to send. Enter ABORT to abort." << endl;
 	cout << "Message to server: ";
 	while (getline(cin, user_msg))
 	{
 		if (user_msg.empty())
 		{
 			cout << "Message is empty. Please re-enter. Enter ABORT to abort." << endl;
-			cout << "Message to server: ";
+			cout << "Message to send: ";
 		}
 		else { break; }
 	}
-
-
-
 
 	return user_msg;
 }
@@ -71,7 +70,7 @@ int get_port_number()
 	cout << "Enter the port number: ";
 	while (getline(cin, listen_port_num_str))
 	{
-		bool invalid_input = any_of(listen_port_num_str.begin(), listen_port_num_str.end(), [](const char c) { return !isdigit(c); });
+		bool invalid_input = any_of(listen_port_num_str.begin(), listen_port_num_str.end(), is_char());
 		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
 		else if (listen_port_num_str.empty()) { cout << "Input is empty. Please re-enter: "; }
 		else { break; }

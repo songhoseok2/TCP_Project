@@ -11,6 +11,8 @@ int main()
 {
 	vector<socket_info> connected_client_sockets;
 	vector<thread> socket_threads;
+	double memory[NUMMEMORY];
+	account_cache_set cache[CACHESET];
 
 	initialize_winsock();
 	socket_info listening_socket = create_listening_socket();
@@ -21,8 +23,14 @@ int main()
 	}
 
 	listen(listening_socket.sock, SOMAXCONN);
-	mutex master_mutex; //mutex and shared data protections will be segmented properly in the future
-	thread client_connection_thread = thread(wait_for_clients, ref(connected_client_sockets), ref(socket_threads), ref(listening_socket), ref(master_mutex));
+	mutex master_mutex; //mutex and shared data protections will be segmented and implemented properly in the future
+	thread client_connection_thread = thread(	wait_for_clients,
+												ref(connected_client_sockets),
+												ref(socket_threads),
+												ref(listening_socket),
+												ref(master_mutex),
+												memory,
+												cache);
 	
 	client_connection_thread.join();
 	WSACleanup();

@@ -44,7 +44,11 @@ void set_client_connection_info(socket_info &client_socket)
 //process request
 //send request result to client
 
-void accept_requests(const int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
+void accept_requests(	const int thread_number,
+						vector<socket_info>& connected_client_sockets,
+						mutex& master_mutex,
+						double memory[NUMMEMORY],
+						account_cache_set cache[CACHESET])
 {
 	char request_buff[2];
 	for (ZeroMemory(request_buff, 2); true; ZeroMemory(request_buff, 2))
@@ -85,13 +89,18 @@ void accept_requests(const int thread_number, vector<socket_info>& connected_cli
 
 		char current_request = request_buff[0];
 		cout << current_request << " request from " << connected_client_sockets[thread_number].IP_address << " accepted. Processing." << endl;
-		process_requests(current_request, thread_number, connected_client_sockets, master_mutex);
+		process_requests(current_request, thread_number, connected_client_sockets, master_mutex, memory, cache);
 		//process results will be sent in send_process_result function within process_requests function above
 	}
 }
 
 //code to wait for and connect to clients real time
-void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thread> &socket_threads, socket_info& listening_socket, mutex &master_mutex)
+void wait_for_clients(	vector<socket_info>& connected_client_sockets,
+						vector<thread> &socket_threads,
+						socket_info& listening_socket,
+						mutex &master_mutex,
+						double memory[NUMMEMORY],
+						account_cache_set cache[CACHESET])
 {
 	int thread_number = 0;
 	while (true)
@@ -113,13 +122,16 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets, vector<thre
 		connected_client_sockets.push_back(client_socket);
 		
 		//new thread for each client connection
-		socket_threads.push_back(thread(accept_requests, thread_number++, ref(connected_client_sockets), ref(master_mutex)));
+		socket_threads.push_back(thread(accept_requests, thread_number++, ref(connected_client_sockets), ref(master_mutex), memory, cache));
 		
 		master_mutex.unlock();
 	}
 }
 
-void send_process_result(const char process_result_buff[2], const int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
+void send_process_result(	const char process_result_buff[2],
+							const int thread_number,
+							vector<socket_info>& connected_client_sockets,
+							mutex& master_mutex)
 {
 	//send process result to client
 	int bytes_sent = send(connected_client_sockets[thread_number].sock, process_result_buff, sizeof(process_result_buff) , 0);
@@ -159,11 +171,15 @@ void receive_message(const int thread_number, vector<socket_info>& connected_cli
 	cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " messaged: \"" << msg_buff << "\"" << endl;
 }
 
-bank_account read_account(const string account_holder, char& process_result)
+double read_account(const int account_number,
+					char& process_result,
+					mutex& master_mutex,
+					double memory[NUMMEMORY],
+					account_cache_set cache[CACHESET])
 {
 	//code to read from account
 
-	return bank_account();
+	return 0.0; //temporary code for compiling issue
 }
 
 void send_account_balance()
@@ -172,25 +188,25 @@ void send_account_balance()
 
 }
 
-void update_account(const string account_holder, const double new_balance, char& process_result)
+int get_account_number()
 {
-	//code to update account
-
-}
-
-string get_account_holder_name()
-{
-	string account_holder;
-	cout << "Enter account holder's name: ";
-	while (getline(cin, account_holder))
+	string account_number_str;
+	cout << "Enter the number of the account you wish to read: ";
+	while (getline(cin, account_number_str))
 	{
-		if (account_holder.empty()) { cout << "ERROR: Account holder's name is empty. Please re-enter: "; }
+		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
+		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
+		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
 		else { break; }
 	}
-	return account_holder;
+	return stoi(account_number_str);
 }
 
-void process_requests(const char current_request, const int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
+void process_requests(	const char current_request,
+						const int thread_number,
+						vector<socket_info>& connected_client_sockets,
+						mutex& master_mutex, double memory[NUMMEMORY],
+						account_cache_set cache[CACHESET])
 {
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
@@ -204,15 +220,15 @@ void process_requests(const char current_request, const int thread_number, vecto
 	}
 	else if (current_request == 'r') //read
 	{
-		string account_holder = get_account_holder_name();
-		bank_account requested_account_info = read_account(account_holder, process_result);
+		int account_number = get_account_number();
+		double account_balance = read_account(account_number, process_result, master_mutex, memory, cache);
 		process_result_buff[1] = process_result;
 		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
 		send_account_balance();
 	}
 	else if (current_request == 'u') //update
 	{
-
+		//code to update account balance
 	}
 	else { exit_with_err_msg("Client " + string(connected_client_sockets[thread_number].IP_address) + " has sent an invalid request. Request sent: " + current_request); }
 	master_mutex.unlock();
