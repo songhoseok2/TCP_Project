@@ -48,7 +48,7 @@ void accept_requests(	const int thread_number,
 						vector<socket_info>& connected_client_sockets,
 						mutex& master_mutex,
 						double memory[NUMMEMORY],
-						account_cache_set cache[CACHESET])
+						account_cache_set cache[CACHENUMOFSETS])
 {
 	char request_buff[2];
 	for (ZeroMemory(request_buff, 2); true; ZeroMemory(request_buff, 2))
@@ -77,14 +77,14 @@ void accept_requests(	const int thread_number,
 		int bytes_sent = send(connected_client_sockets[thread_number].sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff) , 0);
 		if (bytes_sent == SOCKET_ERROR)
 		{
-			cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
-			cout << "ERROR number: " << WSAGetLastError() << endl;
-			break;
+		cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl;
+		break;
 		}
 		else if (bytes_sent == 0)
 		{
-			client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-			break;
+		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
+		break;
 		}
 
 		char current_request = request_buff[0];
@@ -96,11 +96,11 @@ void accept_requests(	const int thread_number,
 
 //code to wait for and connect to clients real time
 void wait_for_clients(	vector<socket_info>& connected_client_sockets,
-						vector<thread> &socket_threads,
+						vector<thread>& socket_threads,
 						socket_info& listening_socket,
-						mutex &master_mutex,
+						mutex& master_mutex,
 						double memory[NUMMEMORY],
-						account_cache_set cache[CACHESET])
+						account_cache_set cache[CACHENUMOFSETS])
 {
 	int thread_number = 0;
 	while (true)
@@ -120,10 +120,10 @@ void wait_for_clients(	vector<socket_info>& connected_client_sockets,
 
 		master_mutex.lock();
 		connected_client_sockets.push_back(client_socket);
-		
+
 		//new thread for each client connection
 		socket_threads.push_back(thread(accept_requests, thread_number++, ref(connected_client_sockets), ref(master_mutex), memory, cache));
-		
+
 		master_mutex.unlock();
 	}
 }
@@ -134,7 +134,7 @@ void send_process_result(	const char process_result_buff[2],
 							mutex& master_mutex)
 {
 	//send process result to client
-	int bytes_sent = send(connected_client_sockets[thread_number].sock, process_result_buff, sizeof(process_result_buff) , 0);
+	int bytes_sent = send(connected_client_sockets[thread_number].sock, process_result_buff, sizeof(process_result_buff), 0);
 	if (bytes_sent == SOCKET_ERROR)
 	{
 		cout << "ERROR in sending request result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
@@ -146,11 +146,13 @@ void send_process_result(	const char process_result_buff[2],
 		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
 		return;
 	}
-	
+
 	cout << "Sent process result " << process_result_buff << " to client " << connected_client_sockets[thread_number].IP_address << "." << endl;
 }
 
-void receive_message(const int thread_number, vector<socket_info>& connected_client_sockets, mutex& master_mutex)
+void receive_message(	const int thread_number,
+						vector<socket_info>& connected_client_sockets,
+						mutex& master_mutex)
 {
 	char msg_buff[4096];
 
@@ -171,15 +173,41 @@ void receive_message(const int thread_number, vector<socket_info>& connected_cli
 	cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " messaged: \"" << msg_buff << "\"" << endl;
 }
 
+void process_request_m(	const int thread_number,
+						vector<socket_info>& connected_client_sockets,
+						mutex& master_mutex)
+{
+	char process_result_buff[2];
+	process_result_buff[1] = '\0';
+	receive_message(thread_number, connected_client_sockets, master_mutex);
+	process_result_buff[0] = 's'; //message received successfully
+	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+}
+
+void process_request_r(	const int thread_number,
+						vector<socket_info>& connected_client_sockets,
+						mutex& master_mutex,
+						double memory[NUMMEMORY],
+						account_cache_set cache[CACHENUMOFSETS])
+{
+	char process_result_buff[2];
+	process_result_buff[1] = '\0';
+	char read_result;
+	int account_number = get_account_number();
+	double account_balance = read_account(account_number, read_result, master_mutex, memory, cache);
+	process_result_buff[1] = read_result;
+	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+	send_account_balance();
+}
+
 double read_account(const int account_number,
 					char& process_result,
 					mutex& master_mutex,
 					double memory[NUMMEMORY],
-					account_cache_set cache[CACHESET])
+					account_cache_set cache[CACHENUMOFSETS])
 {
-	//code to read from account
-
-	return 0.0; //temporary code for compiling issue
+	load_onto_cache(account_number, memory, cache);
+	return read_from_cache(account_number, cache);
 }
 
 void send_account_balance()
@@ -205,26 +233,18 @@ int get_account_number()
 void process_requests(	const char current_request,
 						const int thread_number,
 						vector<socket_info>& connected_client_sockets,
-						mutex& master_mutex, double memory[NUMMEMORY],
-						account_cache_set cache[CACHESET])
+						mutex& master_mutex,
+						double memory[NUMMEMORY],
+						account_cache_set cache[CACHENUMOFSETS])
 {
-	char process_result_buff[2];
-	process_result_buff[1] = '\0';
-	char process_result;
 	master_mutex.lock();
 	if (current_request == 'm')//message
 	{
-		receive_message(thread_number, connected_client_sockets, master_mutex);
-		process_result_buff[0] = 's'; //message received successfully
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+		process_request_m(thread_number, connected_client_sockets, master_mutex);
 	}
 	else if (current_request == 'r') //read
 	{
-		int account_number = get_account_number();
-		double account_balance = read_account(account_number, process_result, master_mutex, memory, cache);
-		process_result_buff[1] = process_result;
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
-		send_account_balance();
+		process_request_r(thread_number, connected_client_sockets, master_mutex, memory, cache);
 	}
 	else if (current_request == 'u') //update
 	{

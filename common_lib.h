@@ -4,12 +4,13 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <vector>
 #include <WS2tcpip.h>
 
 #define NUMMEMORY 10000
-#define CACHELINE 50
-#define CACHETAG 5
-#define CACHESET 250
+#define CACHENUMOFLINE 30
+#define SETBLOCKSIZE 20
+#define CACHENUMOFSETS 10
 
 using namespace std;
 
@@ -27,14 +28,15 @@ struct socket_info
 
 struct cache_tag
 {
-	double cache_lines[CACHELINE];
+	int tag_id = -1;
+	double cache_lines[CACHENUMOFLINE];
 };
 
 struct account_cache_set
 {
-	int dirty;
-	int LRU;
-	cache_tag tags[CACHETAG];
+	bool dirty = false;
+	vector<int> usage_deque; //for the purpose of LRU. most recent tagblock is at the back
+	cache_tag blocks[SETBLOCKSIZE];
 };
 
 void initialize_winsock();

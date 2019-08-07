@@ -1,11 +1,43 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <iomanip>
+#include <algorithm>
 #include "server.h"
 #include <WS2tcpip.h>
 #pragma comment (lib, "ws2_32.lib")
 
 using namespace std;
+
+void read_in_balance_data(double memory[NUMMEMORY])
+{
+	ifstream infile("balance_data.txt");
+	double current_balance;
+	for (int i = 0; infile >> current_balance; ++i) { memory[i] = current_balance; }
+	infile.close();
+}
+
+void update_balance_data(double memory[NUMMEMORY])
+{
+	ofstream outfile("balance_data.txt");
+	for (int i = 0; memory[i] >= 0; ++i)
+	{
+		outfile << fixed << setprecision(2) << memory[i] << endl;
+	}
+}
+
+void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[CACHESET])
+{
+	fill(memory, memory + NUMMEMORY, -1);
+	for (int i = 0; i < CACHESET; ++i)
+	{
+		for (int k = 0; k < SETBLOCKSIZE; ++k)
+		{
+			fill(cache[i].blocks[k].cache_lines, cache[i].blocks[k].cache_lines + CACHELINE, -1);
+		}
+	}
+}
 
 int main()
 {
@@ -13,7 +45,9 @@ int main()
 	vector<thread> socket_threads;
 	double memory[NUMMEMORY];
 	account_cache_set cache[CACHESET];
+	initialize_cache_and_mem(memory, cache);
 
+	read_in_balance_data(memory);
 	initialize_winsock();
 	socket_info listening_socket = create_listening_socket();
 
@@ -34,6 +68,6 @@ int main()
 	
 	client_connection_thread.join();
 	WSACleanup();
-
+	update_balance_data(memory);
 	return 0;
 }

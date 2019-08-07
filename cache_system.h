@@ -17,7 +17,7 @@ NOTE:
 Cache system design:
 	-	Set associative cache
 	-	Write-back policy
-	-	LRU (Least Recently Used)
+	-	LRU (Least Recently Used) within each set
 	-	Dirty-bit
 
 
@@ -27,6 +27,17 @@ int get_set_index(const int account_number);
 
 int get_tag_index(const int account_number);
 
-int get_block_offset(const int account_number);
+int get_tag_block_offset(const int account_number);
+
+int search_set_blocks(const int tag_to_search, cache_tag blocks[SETBLOCKSIZE]);
+
+void update_LRU();
+
+void load_tag_block(const int account_number, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
+
+void load_onto_cache(const int account_number, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
+
+//this function assumes that data is already present in cache
+double read_from_cache(const int account_number, account_cache_set cache[CACHENUMOFSETS]);
 
 #endif
