@@ -29,9 +29,13 @@ int get_tag_index(const int account_number);
 
 int get_tag_block_offset(const int account_number);
 
+int get_account_number(const int set_index, const int tag_index, const int tag_block_offset);
+
 int search_set_blocks(const int tag_to_search, cache_tag blocks[SETBLOCKSIZE]);
 
-void update_LRU();
+void update_LRU(const int most_recent_tag, account_cache_set cache[CACHENUMOFSETS]);
+
+void write_to_memory(const int set_index, const int tag_index, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
 
 void load_tag_block(const int account_number, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
 

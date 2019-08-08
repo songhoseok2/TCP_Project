@@ -4,11 +4,12 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
-#include <vector>
+#include <deque>
+#include <cassert>
 #include <WS2tcpip.h>
 
 #define NUMMEMORY 10000
-#define CACHENUMOFLINE 30
+#define TAGBLOCKSIZE 30
 #define SETBLOCKSIZE 20
 #define CACHENUMOFSETS 10
 
@@ -28,15 +29,17 @@ struct socket_info
 
 struct cache_tag
 {
+	bool dirty = false;
 	int tag_id = -1;
-	double cache_lines[CACHENUMOFLINE];
+	double cache_lines[TAGBLOCKSIZE];
 };
 
 struct account_cache_set
-{
-	bool dirty = false;
-	vector<int> usage_deque; //for the purpose of LRU. most recent tagblock is at the back
-	cache_tag blocks[SETBLOCKSIZE];
+{	
+	//for the purpose of LRU. most recent tagblock is at the back. LRU is at the front.
+	deque<int> usage_deque;
+
+	cache_tag tag_blocks[SETBLOCKSIZE];
 };
 
 void initialize_winsock();

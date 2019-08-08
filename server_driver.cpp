@@ -27,14 +27,14 @@ void update_balance_data(double memory[NUMMEMORY])
 	}
 }
 
-void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[CACHESET])
+void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS])
 {
 	fill(memory, memory + NUMMEMORY, -1);
-	for (int i = 0; i < CACHESET; ++i)
+	for (int i = 0; i < CACHENUMOFSETS; ++i)
 	{
 		for (int k = 0; k < SETBLOCKSIZE; ++k)
 		{
-			fill(cache[i].blocks[k].cache_lines, cache[i].blocks[k].cache_lines + CACHELINE, -1);
+			fill(cache[i].tag_blocks[k].cache_lines, cache[i].tag_blocks[k].cache_lines + TAGBLOCKSIZE, -1);
 		}
 	}
 }
@@ -44,7 +44,7 @@ int main()
 	vector<socket_info> connected_client_sockets;
 	vector<thread> socket_threads;
 	double memory[NUMMEMORY];
-	account_cache_set cache[CACHESET];
+	account_cache_set cache[CACHENUMOFSETS];
 	initialize_cache_and_mem(memory, cache);
 
 	read_in_balance_data(memory);
