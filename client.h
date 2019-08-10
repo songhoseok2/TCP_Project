@@ -17,6 +17,8 @@ bool send_request(socket_info& server_socket, const char current_request);
 
 void send_message(socket_info& server_socket);
 
+void receive_account_balance(socket_info& server_socket);
+
 void client_requests(socket_info& server_socket);
 
 #endif

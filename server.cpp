@@ -25,7 +25,7 @@ socket_info create_listening_socket()
 	//setup the host_addr structure for use in bind call
 	listening_socket.sock_addr.sin_family = AF_INET;				//server byte order
 	listening_socket.sock_addr.sin_addr.S_un.S_addr = INADDR_ANY;	//automatically be filled with current host's IP address
-	listening_socket.sock_addr.sin_port = htons(listen_port_num);	//convert short integer value for port must be converted into network byte order
+	listening_socket.sock_addr.sin_port = htons(listen_port_num);	//short integer value for port must be converted into network byte order
 	
 	return listening_socket;
 }
@@ -192,28 +192,21 @@ void process_request_r(	const int thread_number,
 {
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
-	char read_result;
 	int account_number = get_account_number();
-	double account_balance = read_account(account_number, read_result, master_mutex, memory, cache);
-	process_result_buff[1] = read_result;
+	double requested_balance = read_account(account_number, master_mutex, memory, cache);
+	process_result_buff[0] = requested_balance == -1 ? 'f' : 's'; //failed if -1, success if not
 	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
-	send_account_balance();
+	send(connected_client_sockets[thread_number].sock, (char*) &requested_balance, sizeof(requested_balance), 0);
 }
 
 double read_account(const int account_number,
-					char& process_result,
 					mutex& master_mutex,
 					double memory[NUMMEMORY],
 					account_cache_set cache[CACHENUMOFSETS])
 {
 	load_onto_cache(account_number, memory, cache);
-	return read_from_cache(account_number, cache);
-}
-
-void send_account_balance()
-{
-	//code to send the result account balance to client
-
+	double requested_balance = read_from_cache(account_number, cache);
+	return requested_balance;
 }
 
 int get_account_number()

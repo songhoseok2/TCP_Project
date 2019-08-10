@@ -110,8 +110,41 @@ void receive_process_result(socket_info& server_socket, const char current_reque
 	}
 	else if(string(request_result_buff, 0, bytes_received) == "s")
 	{
-		cout << "Server successfully received message." << endl;
+		switch (current_request)
+		{
+		case 'm':
+			cout << "Server successfully received message." << endl;
+			break;
+		case 'r':
+			cout << "Server successfully accessed the account." << endl;
+			break;
+		}
+		
 	}
+
+}
+
+void receive_account_balance(socket_info& server_socket)
+{
+	double balance_buff;
+
+	//integer / double to and from network byte order isn't handled yet
+
+	//receive message sent from the client
+	int bytes_received = recv(server_socket.sock, (char*) &balance_buff, sizeof(balance_buff), 0);
+	if (bytes_received == SOCKET_ERROR)
+	{
+		cout << "ERROR in receiving requested balance from server " << server_socket.IP_address << ". Exiting." << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl;
+		return;
+	}
+	else if (bytes_received == 0)
+	{
+		cout << "Server " << server_socket.IP_address << " has disconnected." << endl;
+		return;
+	}
+
+	cout << "Requested balance: " << balance_buff << endl;
 }
 
 void client_requests(socket_info& server_socket)
@@ -127,7 +160,8 @@ void client_requests(socket_info& server_socket)
 			}
 			else if (request == 'r')
 			{
-
+				receive_process_result(server_socket, 'r');
+				receive_account_balance(server_socket);
 			}
 			else if (request == 'u')
 			{

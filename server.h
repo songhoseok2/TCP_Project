@@ -51,12 +51,9 @@ void process_request_r(	const int thread_number,
 						account_cache_set cache[CACHENUMOFSETS]);
 
 double read_account(const int account_number,
-					char& process_result, 
 					mutex& master_mutex,
 					double memory[NUMMEMORY],
 					account_cache_set cache[CACHENUMOFSETS]);
-
-void send_account_balance();
 
 int get_account_number();
 
