@@ -86,7 +86,7 @@ void send_message(socket_info &server_socket)
 	else
 	{
 		//Send the message
-		int send_msg_result = send(server_socket.sock, msg_buff, sizeof(msg_buff) , 0);
+		int send_msg_result = send(server_socket.sock, msg_buff, sizeof(msg_buff), 0);
 		if (send_msg_result == SOCKET_ERROR)
 		{
 			exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
@@ -98,12 +98,12 @@ void send_message(socket_info &server_socket)
 	}
 }
 
-void receive_process_result(socket_info& server_socket, const char current_request)
+bool receive_process_result(socket_info& server_socket, const char current_request)
 {
 	//Wait for response
 	char request_result_buff[2];
 	ZeroMemory(request_result_buff, 2);
-	int bytes_received = recv(server_socket.sock, request_result_buff, sizeof(request_result_buff), 0);
+	int bytes_received = recv(server_socket.sock, request_result_buff, sizeof(request_result_buff) + 2, 0);
 	if (bytes_received < 0)
 	{
 		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
@@ -120,8 +120,25 @@ void receive_process_result(socket_info& server_socket, const char current_reque
 			break;
 		}
 		
+		return true;
+	}
+	else if (string(request_result_buff, 0, bytes_received) == "f")
+	{
+		switch (current_request)
+		{
+		case 'm':
+			cout << "Server failed to receive the message." << endl;
+			break;
+		case 'r':
+			cout << "Server failed to access the account." << endl;
+			break;
+		}
+
+		return false;
 	}
 
+	assert(false);//shouldn't reach here
+	return false; //compiling purpose
 }
 
 void receive_account_balance(socket_info& server_socket)
@@ -144,7 +161,7 @@ void receive_account_balance(socket_info& server_socket)
 		return;
 	}
 
-	cout << "Requested balance: " << balance_buff << endl;
+	cout << "Requested balance: $" << balance_buff << endl;
 }
 
 int get_account_number()
@@ -186,8 +203,10 @@ void client_requests(socket_info& server_socket)
 			else if (request == 'r')
 			{
 				send_account_number(server_socket);
-				receive_process_result(server_socket, 'r');
-				receive_account_balance(server_socket);
+				if (receive_process_result(server_socket, 'r'))
+				{
+					receive_account_balance(server_socket);
+				}	
 			}
 			else if (request == 'u')
 			{
