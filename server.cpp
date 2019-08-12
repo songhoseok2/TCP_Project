@@ -77,14 +77,14 @@ void accept_requests(	const int thread_number,
 		int bytes_sent = send(connected_client_sockets[thread_number].sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff) , 0);
 		if (bytes_sent == SOCKET_ERROR)
 		{
-		cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
-		cout << "ERROR number: " << WSAGetLastError() << endl;
-		break;
+			cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+			cout << "ERROR number: " << WSAGetLastError() << endl;
+			break;
 		}
 		else if (bytes_sent == 0)
 		{
-		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-		break;
+			client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
+			break;
 		}
 
 		char current_request = request_buff[0];
@@ -211,7 +211,12 @@ void process_request_r(	const int thread_number,
 	double requested_balance = read_account(account_number, master_mutex, memory, cache);
 	process_result_buff[0] = requested_balance == -1 ? 'f' : 's'; //failed if -1, success if not
 	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
-	send(connected_client_sockets[thread_number].sock, (char*) &requested_balance, sizeof(requested_balance), 0);
+	
+	if (requested_balance != -1)
+	{
+		send(connected_client_sockets[thread_number].sock, (char*)& requested_balance, sizeof(requested_balance), 0);
+		cout << "Sent requested_balance of $" << requested_balance << " to client " << connected_client_sockets[thread_number].IP_address << "." << endl;
+	}
 }
 
 double read_account(const int account_number,
