@@ -192,7 +192,22 @@ void process_request_r(	const int thread_number,
 {
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
-	int account_number = get_account_number();
+	int account_number;
+
+	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& account_number, sizeof(account_number), 0);
+	if (bytes_received == SOCKET_ERROR)
+	{
+		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl;
+		return;
+	}
+	else if (bytes_received == 0)
+	{
+		cout << "Client " << connected_client_sockets[thread_number].IP_address << " has disconnected." << endl;
+		return;
+	}
+	cout << "Client " << connected_client_sockets[thread_number].IP_address << " requested the balance of account number " << account_number << "." << endl;
+
 	double requested_balance = read_account(account_number, master_mutex, memory, cache);
 	process_result_buff[0] = requested_balance == -1 ? 'f' : 's'; //failed if -1, success if not
 	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
@@ -207,20 +222,6 @@ double read_account(const int account_number,
 	load_onto_cache(account_number, memory, cache);
 	double requested_balance = read_from_cache(account_number, cache);
 	return requested_balance;
-}
-
-int get_account_number()
-{
-	string account_number_str;
-	cout << "Enter the number of the account you wish to read: ";
-	while (getline(cin, account_number_str))
-	{
-		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
-		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
-		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
-		else { break; }
-	}
-	return stoi(account_number_str);
 }
 
 void process_requests(	const char current_request,

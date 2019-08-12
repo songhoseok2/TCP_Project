@@ -19,6 +19,8 @@ void send_message(socket_info& server_socket);
 
 void receive_account_balance(socket_info& server_socket);
 
+int get_account_number();
+
 void client_requests(socket_info& server_socket);
 
 #endif

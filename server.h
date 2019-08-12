@@ -55,8 +55,6 @@ double read_account(const int account_number,
 					double memory[NUMMEMORY],
 					account_cache_set cache[CACHENUMOFSETS]);
 
-int get_account_number();
-
 void process_requests(	const char current_request,
 						const int thread_number, 
 						vector<socket_info>& connected_client_sockets, 

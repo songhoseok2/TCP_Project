@@ -126,6 +126,15 @@ void receive_process_result(socket_info& server_socket, const char current_reque
 
 void receive_account_balance(socket_info& server_socket)
 {
+	int account_number = get_account_number();
+
+	int send_result = send(server_socket.sock, (char*)&account_number, sizeof(account_number), 0);
+	if (send_result == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+
+
 	double balance_buff;
 
 	//integer / double to and from network byte order isn't handled yet
@@ -145,6 +154,20 @@ void receive_account_balance(socket_info& server_socket)
 	}
 
 	cout << "Requested balance: " << balance_buff << endl;
+}
+
+int get_account_number()
+{
+	string account_number_str;
+	cout << "Enter the number of the account you wish to read: ";
+	while (getline(cin, account_number_str))
+	{
+		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
+		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
+		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
+		else { break; }
+	}
+	return stoi(account_number_str);
 }
 
 void client_requests(socket_info& server_socket)
