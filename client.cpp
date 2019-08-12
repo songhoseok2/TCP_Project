@@ -33,16 +33,25 @@ socket_info create_server_socket()
 	return server_socket;
 }
 
+void server_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const int port_num)
+{
+	cout << "Server " << IP_address << " has disconnected from port " << port_num << "." << endl;
+}
+
 bool send_request(socket_info& server_socket, const char request)
 {
 	char request_buff[2];
 	request_buff[0]= request;
 	request_buff[1] = '\0';
-	int send_result = send(server_socket.sock, request_buff, sizeof(request_buff) , 0);
-	if (send_result == SOCKET_ERROR)
+	int bytes_sent = send(server_socket.sock, request_buff, sizeof(request_buff) , 0);
+	if (bytes_sent == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Error in sending request to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 		return false;
+	}
+	else if (bytes_sent == 0)
+	{
+		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
 	}
 	else
 	{
@@ -50,9 +59,13 @@ bool send_request(socket_info& server_socket, const char request)
 		char request_acceptance_result_buff[2];
 		ZeroMemory(request_acceptance_result_buff, 2);
 		int bytes_received = recv(server_socket.sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff), 0);
-		if (bytes_received < 0)
+		if (bytes_received == SOCKET_ERROR)
 		{
 			exit_with_err_msg("Error in receiving request acceptance result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+		}
+		else if (bytes_received == 0)
+		{
+			server_disconnection_message(server_socket.IP_address, server_socket.port_num);
 		}
 		else
 		{
@@ -86,10 +99,14 @@ void send_message(socket_info &server_socket)
 	else
 	{
 		//Send the message
-		int send_msg_result = send(server_socket.sock, msg_buff, sizeof(msg_buff), 0);
-		if (send_msg_result == SOCKET_ERROR)
+		int bytes_sent = send(server_socket.sock, msg_buff, sizeof(msg_buff), 0);
+		if (bytes_sent == SOCKET_ERROR)
 		{
 			exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+		}
+		else if (bytes_sent == 0)
+		{
+			server_disconnection_message(server_socket.IP_address, server_socket.port_num);
 		}
 		else
 		{
@@ -103,10 +120,14 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 	//Wait for response
 	char request_result_buff[2];
 	ZeroMemory(request_result_buff, 2);
-	int bytes_received = recv(server_socket.sock, request_result_buff, sizeof(request_result_buff) + 2, 0);
-	if (bytes_received < 0)
+	int bytes_received = recv(server_socket.sock, request_result_buff, sizeof(request_result_buff), 0);
+	if (bytes_received == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+	else if (bytes_received == 0)
+	{
+		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
 	}
 	else if(string(request_result_buff, 0, bytes_received) == "s")
 	{
@@ -147,7 +168,6 @@ void receive_account_balance(socket_info& server_socket)
 
 	//integer / double to and from network byte order isn't handled yet
 
-	//receive message sent from the client
 	int bytes_received = recv(server_socket.sock, (char*) &balance_buff, sizeof(balance_buff), 0);
 	if (bytes_received == SOCKET_ERROR)
 	{
@@ -157,7 +177,7 @@ void receive_account_balance(socket_info& server_socket)
 	}
 	else if (bytes_received == 0)
 	{
-		cout << "Server " << server_socket.IP_address << " has disconnected." << endl;
+		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
 		return;
 	}
 
@@ -182,10 +202,14 @@ void send_account_number(socket_info& server_socket)
 {
 	int account_number = get_account_number();
 
-	int send_result = send(server_socket.sock, (char*)& account_number, sizeof(account_number), 0);
-	if (send_result == SOCKET_ERROR)
+	int bytes_sent = send(server_socket.sock, (char*)& account_number, sizeof(account_number), 0);
+	if (bytes_sent == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+	else if (bytes_sent == 0)
+	{
+		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
 	}
 }
 
