@@ -6,7 +6,7 @@ using namespace std;
 
 void client_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const int port_num)
 {
-	cout << "Client " << IP_address << " has disconnected from port " << port_num << endl;
+	cout << "Client " << IP_address << " has disconnected from port " << port_num << "." << endl;
 }
 
 socket_info create_listening_socket()
@@ -54,7 +54,7 @@ void accept_requests(	const int thread_number,
 	for (ZeroMemory(request_buff, 2); true; ZeroMemory(request_buff, 2))
 	{
 		//receive request from client
-		int bytes_received = recv(connected_client_sockets[thread_number].sock, request_buff, sizeof(request_buff)+10, 0);
+		int bytes_received = recv(connected_client_sockets[thread_number].sock, request_buff, sizeof(request_buff), 0);
 		if (bytes_received == SOCKET_ERROR)
 		{
 			cout << "ERROR in receiving request from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
@@ -74,7 +74,7 @@ void accept_requests(	const int thread_number,
 		request_acceptance_result_buff[1] = '\0';
 
 		//send request acceptance result to client
-		int bytes_sent = send(connected_client_sockets[thread_number].sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff) , 0);
+		int bytes_sent = send(connected_client_sockets[thread_number].sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff), 0);
 		if (bytes_sent == SOCKET_ERROR)
 		{
 			cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
@@ -134,7 +134,12 @@ void send_process_result(	const char process_result_buff[2],
 							mutex& master_mutex)
 {
 	//send process result to client
-	int bytes_sent = send(connected_client_sockets[thread_number].sock, process_result_buff, sizeof(process_result_buff), 0);
+	char temp_process_result_buff[2];
+	temp_process_result_buff[0] = process_result_buff[0];
+	temp_process_result_buff[1] = process_result_buff[1];
+
+	//if process_result_buff (function argument) is directly passed onto send(), it's 4 bytes instead of 2
+	int bytes_sent = send(connected_client_sockets[thread_number].sock, temp_process_result_buff, sizeof(temp_process_result_buff), 0);
 	if (bytes_sent == SOCKET_ERROR)
 	{
 		cout << "ERROR in sending request result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
@@ -193,7 +198,6 @@ void process_request_r(	const int thread_number,
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
 	int account_number;
-
 	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& account_number, sizeof(account_number), 0);
 	if (bytes_received == SOCKET_ERROR)
 	{
@@ -214,7 +218,19 @@ void process_request_r(	const int thread_number,
 	
 	if (requested_balance != -1)
 	{
-		send(connected_client_sockets[thread_number].sock, (char*)& requested_balance, sizeof(requested_balance), 0);
+		int bytes_sent = send(connected_client_sockets[thread_number].sock, (char*)& requested_balance, sizeof(requested_balance), 0);
+		if (bytes_sent == SOCKET_ERROR)
+		{
+			cout << "ERROR in sending requested balance to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+			cout << "ERROR number: " << WSAGetLastError() << endl;
+			return;
+		}
+		else if (bytes_sent == 0)
+		{
+			client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
+			return;
+		}
+		
 		cout << "Sent requested_balance of $" << requested_balance << " to client " << connected_client_sockets[thread_number].IP_address << "." << endl;
 	}
 }
