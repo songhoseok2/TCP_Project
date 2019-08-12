@@ -126,15 +126,6 @@ void receive_process_result(socket_info& server_socket, const char current_reque
 
 void receive_account_balance(socket_info& server_socket)
 {
-	int account_number = get_account_number();
-
-	int send_result = send(server_socket.sock, (char*)&account_number, sizeof(account_number), 0);
-	if (send_result == SOCKET_ERROR)
-	{
-		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-	}
-
-
 	double balance_buff;
 
 	//integer / double to and from network byte order isn't handled yet
@@ -170,6 +161,17 @@ int get_account_number()
 	return stoi(account_number_str);
 }
 
+void send_account_number(socket_info& server_socket)
+{
+	int account_number = get_account_number();
+
+	int send_result = send(server_socket.sock, (char*)& account_number, sizeof(account_number), 0);
+	if (send_result == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+}
+
 void client_requests(socket_info& server_socket)
 {
 	for (char request = get_request(); request != 'q'; request = get_request())
@@ -183,6 +185,7 @@ void client_requests(socket_info& server_socket)
 			}
 			else if (request == 'r')
 			{
+				send_account_number(server_socket);
 				receive_process_result(server_socket, 'r');
 				receive_account_balance(server_socket);
 			}

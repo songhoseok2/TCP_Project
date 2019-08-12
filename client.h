@@ -21,6 +21,8 @@ void receive_account_balance(socket_info& server_socket);
 
 int get_account_number();
 
+void send_account_number(socket_info& server_socket);
+
 void client_requests(socket_info& server_socket);
 
 #endif
