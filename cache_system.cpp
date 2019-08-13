@@ -3,30 +3,30 @@
 
 using namespace std;
 
-int get_set_id(const int account_number) { return account_number % CACHENUMOFSETS; }
-
-int get_tag_id(const int account_number) { return floor(account_number / (CACHENUMOFSETS * SETBLOCKSIZE)); }
-
 int get_tag_block_offset(const int account_number) { return account_number % TAGBLOCKSIZE; }
 
-int get_account_number(const int set_id, const int tag_id, const int tag_block_offset)
-{
-	return set_id * CACHENUMOFSETS + tag_id * SETBLOCKSIZE + tag_block_offset;
-}
+int get_tag_id(const int account_number) { return (account_number - get_tag_block_offset(account_number)) / (CACHENUMOFSETS * SETBLOCKSIZE * TAGBLOCKSIZE); }
+
+//(account_number - get_tag_block_offset(account_number) - get_tag_id(account_number) * CACHENUMOFSETS * SETBLOCKSIZE * TAGBLOCKSIZE) / (SETBLOCKSIZE * TAGBLOCKSIZE); }
+int get_set_id(const int account_number) { return (account_number / (SETBLOCKSIZE * TAGBLOCKSIZE)) % CACHENUMOFSETS; }
+
+int get_account_number(const int set_id, const int tag_id, const int tag_block_offset) { return set_id * CACHENUMOFSETS + tag_id * SETBLOCKSIZE + tag_block_offset; }
 
 int get_cache_tag_index(const int tag_id, cache_tag blocks[SETBLOCKSIZE])
 {
-	auto it = find_if(blocks, blocks + SETBLOCKSIZE, [tag_id](cache_tag current_tag) { return (current_tag.tag_id == tag_id); });
-	return ((it != (blocks + SETBLOCKSIZE)) ? (it - blocks) : -1);	
+	auto it = find_if(blocks, blocks + SETBLOCKSIZE, [tag_id](cache_tag current_tag) { return current_tag.tag_id == tag_id; });
+	return it != (blocks + SETBLOCKSIZE) ? (it - blocks) : -1;
 }
 
 void update_LRU(const int most_recent_tag_index, account_cache_set & current_set)
 {
 	//check if the update is necessary (see if the recent tag is already at the back)
-	if (current_set.usage_deque.back() == most_recent_tag_index) { return; }
+	if (!current_set.usage_deque.empty() && current_set.usage_deque.back() == most_recent_tag_index) { return; }
+
+	if (current_set.usage_deque.empty()) { current_set.usage_deque.push_back(most_recent_tag_index); }
 
 	//if not all tag blocks are being used, LRU(next block to use) should be an empty one so that eviction isn't necessary
-	else if (current_set.usage_deque.size() < CACHENUMOFSETS)
+	if (current_set.usage_deque.size() < SETBLOCKSIZE)
 	{
 		//find an empty tag_block and push_front
 		auto it = find_if(current_set.tag_blocks, current_set.tag_blocks + SETBLOCKSIZE, [](cache_tag current_tag_block) { return current_tag_block.tag_id == -1; });
@@ -34,11 +34,9 @@ void update_LRU(const int most_recent_tag_index, account_cache_set & current_set
 		else { assert(false); } //this is wrong. in this code block there must be an empty tag block.
 	}
 
-	else //update normally
-	{
-		current_set.usage_deque.erase(find(current_set.usage_deque.begin(), current_set.usage_deque.end(), most_recent_tag_index));
-		current_set.usage_deque.push_back(most_recent_tag_index);
-	}
+	auto it = find(current_set.usage_deque.begin(), current_set.usage_deque.end(), most_recent_tag_index);
+	if (it != current_set.usage_deque.end()) { current_set.usage_deque.erase(it); }
+	current_set.usage_deque.push_back(most_recent_tag_index);
 }
 
 
@@ -56,17 +54,13 @@ int load_tag_block(const int account_number, double memory[NUMMEMORY], account_c
 	int set_id = get_set_id(account_number);
 	int LRU_index; //LRU is the index of the tag that is the LRU. not the tag_id
 
-	if (cache[set_id].usage_deque.empty()) //if this set is newly loaded and is empty
-	{
-		cache[set_id].usage_deque.push_back(0);
-	}
-	
-	LRU_index = cache[set_id].usage_deque[0];
+	//if this set is newly loaded and is empty
+	LRU_index = cache[set_id].usage_deque.empty() ? 0 : cache[set_id].usage_deque[0];
 	if (cache[set_id].tag_blocks[LRU_index].dirty)
 	{
 		write_to_memory(set_id, LRU_index, memory, cache);
 	}
-			int current_account_tag_block_offset = get_tag_block_offset(account_number);
+	int current_account_tag_block_offset = get_tag_block_offset(account_number);
 	int beginning_tag_account_number = account_number - current_account_tag_block_offset;
 	for (int i = 0; i < TAGBLOCKSIZE; ++i)
 	{

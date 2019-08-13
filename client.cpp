@@ -154,12 +154,9 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 			cout << "Server failed to access the account." << endl;
 			break;
 		}
-
-		return false;
 	}
 
-	assert(false);//shouldn't reach here
-	return false; //compiling purpose
+	return false;
 }
 
 void receive_account_balance(socket_info& server_socket)

@@ -9,9 +9,11 @@
 #include <WS2tcpip.h>
 
 #define NUMMEMORY 10000
-#define TAGBLOCKSIZE 30
-#define SETBLOCKSIZE 20
-#define CACHENUMOFSETS 10
+
+//small numbers for now for debugging purpose
+#define TAGBLOCKSIZE 4
+#define SETBLOCKSIZE 2
+#define CACHENUMOFSETS 5
 
 using namespace std;
 

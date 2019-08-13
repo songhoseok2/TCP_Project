@@ -23,11 +23,11 @@ Cache system design:
 
 */
 
-int get_set_id(const int account_number);
+int get_tag_block_offset(const int account_number);
 
 int get_tag_id(const int account_number);
 
-int get_tag_block_offset(const int account_number);
+int get_set_id(const int account_number);
 
 int get_account_number(const int set_index, const int tag_id, const int tag_block_offset);
 
