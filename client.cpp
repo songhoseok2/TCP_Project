@@ -100,7 +100,7 @@ double get_new_balance()
 		if (is_valid_balance(new_balance)) { break; }
 		else
 		{
-			cout << new_balance << " isn't a correct currency. Please re-enter: ";
+			cout << new_balance << " isn't a correct currency. Please re-enter: $";
 		}
 	}
 	return stod(new_balance);
