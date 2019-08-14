@@ -2,6 +2,7 @@
 #define CLIENT_H
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include "common_lib.h"
 #include <WS2tcpip.h>
@@ -15,15 +16,21 @@ void server_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const 
 
 bool receive_process_result(socket_info& server_socket, const char current_request);
 
+int get_account_number();
+
+bool is_valid_balance(const string input);
+
+double get_new_balance();
+
 bool send_request(socket_info& server_socket, const char current_request);
 
 void send_message(socket_info& server_socket);
 
 void receive_account_balance(socket_info& server_socket);
 
-int get_account_number();
-
 void send_account_number(socket_info& server_socket);
+
+void send_new_balance(socket_info& server_socket);
 
 void client_requests(socket_info& server_socket);
 

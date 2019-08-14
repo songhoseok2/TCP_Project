@@ -18,7 +18,7 @@ int get_cache_tag_index(const int tag_id, cache_tag blocks[SETBLOCKSIZE])
 	return it != (blocks + SETBLOCKSIZE) ? (it - blocks) : -1;
 }
 
-void update_LRU(const int most_recent_tag_index, account_cache_set & current_set)
+void update_LRU(const int most_recent_tag_index, account_cache_set& current_set)
 {
 	//check if the update is necessary (see if the recent tag is already at the back)
 	if (!current_set.usage_deque.empty() && current_set.usage_deque.back() == most_recent_tag_index) { return; }
@@ -29,7 +29,7 @@ void update_LRU(const int most_recent_tag_index, account_cache_set & current_set
 	if (current_set.usage_deque.size() < SETBLOCKSIZE)
 	{
 		//find an empty tag_block and push_front
-		auto it = find_if(current_set.tag_blocks, current_set.tag_blocks + SETBLOCKSIZE, [](cache_tag current_tag_block) { return current_tag_block.tag_id == -1; });
+		cache_tag* it = find_if(current_set.tag_blocks, current_set.tag_blocks + SETBLOCKSIZE, [](cache_tag current_tag_block) { return current_tag_block.tag_id == -1; });
 		if (it != current_set.tag_blocks + SETBLOCKSIZE) { current_set.usage_deque.push_front(it - current_set.tag_blocks); }
 		else { assert(false); } //this is wrong. in this code block there must be an empty tag block.
 	}
@@ -66,7 +66,7 @@ int load_tag_block(const int account_number, double memory[NUMMEMORY], account_c
 	{
 		cache[set_id].tag_blocks[LRU_index].cache_lines[i] = memory[beginning_tag_account_number + i];
 	}
-	
+
 	cache[set_id].tag_blocks[LRU_index].tag_id = get_tag_id(account_number);
 	update_LRU(LRU_index, cache[set_id]);
 	return LRU_index;
@@ -88,8 +88,6 @@ void load_onto_cache(const int account_number, double memory[NUMMEMORY], account
 	update_LRU(cache_tag_index, cache[set_id]);
 }
 
-
-
 double read_from_cache(const int account_number, account_cache_set cache[CACHENUMOFSETS])
 {
 	int set_id = get_set_id(account_number);
@@ -98,4 +96,21 @@ double read_from_cache(const int account_number, account_cache_set cache[CACHENU
 	double result_balance = cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)];
 	update_LRU(cache_tag_index, cache[set_id]);
 	return result_balance;
+}
+
+char write_account(const int account_number,
+	const double new_balance,
+	double memory[NUMMEMORY],
+	account_cache_set cache[CACHENUMOFSETS])
+{
+	load_onto_cache(account_number, memory, cache);
+	int set_id = get_set_id(account_number);
+	int cache_tag_index = get_cache_tag_index(account_number, cache[set_id].tag_blocks);
+	//if the account balance is already the inteded new_balance, there is no need for an update.
+	if (cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] == new_balance) { return 'n'; }
+	
+	cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] = new_balance;
+	cache[set_id].tag_blocks->dirty = true;
+	update_LRU(cache_tag_index, cache[set_id]);
+	return 's';
 }

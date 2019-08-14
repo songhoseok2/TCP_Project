@@ -35,14 +35,26 @@ int get_cache_tag_index(const int tag_id, cache_tag blocks[SETBLOCKSIZE]);
 
 void update_LRU(const int most_recent_tag_index, account_cache_set& current_set);
 
-void write_to_memory(const int set_index, const int tag_index, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
+void write_to_memory(const int set_index,
+	const int tag_index,
+	double memory[NUMMEMORY],
+	account_cache_set cache[CACHENUMOFSETS]);
 
 //return ths newly loaded tag's cacheINDEX (not the id)
-int load_tag_block(const int account_number, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
+int load_tag_block(const int account_number,
+	double memory[NUMMEMORY],
+	account_cache_set cache[CACHENUMOFSETS]);
 
-void load_onto_cache(const int account_number, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS]);
+void load_onto_cache(const int account_number,
+	double memory[NUMMEMORY],
+	account_cache_set cache[CACHENUMOFSETS]);
 
-//this function assumes that data is already present in cache
+//this function assumes that correct tag block and the data is already loaded in cache
 double read_from_cache(const int account_number, account_cache_set cache[CACHENUMOFSETS]);
+
+char write_account(const int account_number,
+	const double new_balance,
+	double memory[NUMMEMORY],
+	account_cache_set cache[CACHENUMOFSETS]);
 
 #endif

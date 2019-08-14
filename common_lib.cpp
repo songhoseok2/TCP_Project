@@ -35,10 +35,12 @@ char get_request()
 	while (getline(cin, request_str))
 	{
 		if (request_str.size() != 1) { cout << "ERROR: Please enter one character only: "; }
-		else if (	request_str == "q" || 
-					request_str == "m" ||
-					request_str == "r" ||
-					request_str == "u") { break; }
+		else if (request_str == "q" ||
+			request_str == "m" ||
+			request_str == "r" ||
+			request_str == "u") {
+			break;
+		}
 		else { cout << request_str << " isn't a valid request. Please re-enter: "; }
 	}
 

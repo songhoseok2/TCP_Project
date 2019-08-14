@@ -38,6 +38,74 @@ void server_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const 
 	cout << "Server " << IP_address << " has disconnected from port " << port_num << "." << endl;
 }
 
+int get_account_number()
+{
+	string account_number_str;
+	cout << "Enter the number of the account you wish to read: ";
+	while (getline(cin, account_number_str))
+	{
+		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
+		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
+		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
+		else { break; }
+	}
+	return stoi(account_number_str);
+}
+
+bool is_valid_balance(const string input)
+{
+	int num_of_point = count(input.begin(), input.end(), '.');
+
+	if (num_of_point == 0)
+	{
+		string::const_iterator it = find_if(input.begin(), input.end(), [](char c) { return !isdigit(c); });
+		return it == input.end();
+	}
+	else if (num_of_point == 1)
+	{
+		string::const_iterator dec_point_it = find(input.begin(), input.end(), '.');
+		if (dec_point_it + 1 == input.end()) { return false; }
+		string::const_iterator it = find_if(input.begin(), dec_point_it, [](char c) { return !isdigit(c); });
+		if (it == dec_point_it) { return false; }
+		else
+		{
+			if (dec_point_it + 2 == input.end())
+			{
+				return isdigit(input.back());
+			}
+			else if (dec_point_it + 3 == input.end())
+			{
+				return isdigit(input[(int)input.size() - 2] && isdigit(input.back()));
+			}
+			else
+			{
+				return false;
+			}
+		}
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
+double get_new_balance()
+{
+	string new_balance;
+
+	cout << "Please enter the amount of the new balance: ";
+	while (getline(cin, new_balance))
+	{
+		if (is_valid_balance(new_balance)) { break; }
+		else
+		{
+			cout << new_balance << " isn't a correct currency. Please re-enter: ";
+		}
+	}
+	return stod(new_balance);
+}
+
 bool send_request(socket_info& server_socket, const char request)
 {
 	char request_buff[2];
@@ -139,8 +207,16 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 		case 'r':
 			cout << "Server successfully accessed the account." << endl;
 			break;
+		case 'u':
+			cout << "Server successfully updated the account." << endl;
+			break;
 		}
 		
+		return true;
+	}
+	else if (string(request_result_buff, 0, bytes_received) == "n")
+	{
+		cout << "Requested account already has the amount of new balance entered. No update has occured." << endl;
 		return true;
 	}
 	else if (string(request_result_buff, 0, bytes_received) == "f")
@@ -152,6 +228,9 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 			break;
 		case 'r':
 			cout << "Server failed to access the account." << endl;
+			break;
+		case 'u':
+			cout << "Server failed to update the account." << endl;
 			break;
 		}
 	}
@@ -178,21 +257,7 @@ void receive_account_balance(socket_info& server_socket)
 		return;
 	}
 
-	cout << "Requested balance: $" << balance_buff << endl;
-}
-
-int get_account_number()
-{
-	string account_number_str;
-	cout << "Enter the number of the account you wish to read: ";
-	while (getline(cin, account_number_str))
-	{
-		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
-		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
-		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
-		else { break; }
-	}
-	return stoi(account_number_str);
+	cout << "Requested balance: $" << fixed << setprecision(2) << balance_buff << endl;
 }
 
 void send_account_number(socket_info& server_socket)
@@ -203,6 +268,21 @@ void send_account_number(socket_info& server_socket)
 	if (bytes_sent == SOCKET_ERROR)
 	{
 		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+	else if (bytes_sent == 0)
+	{
+		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+	}
+}
+
+void send_new_balance(socket_info& server_socket)
+{
+	int new_balance = get_new_balance();
+
+	int bytes_sent = send(server_socket.sock, (char*)& new_balance, sizeof(new_balance), 0);
+	if (bytes_sent == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending new_balance to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 	else if (bytes_sent == 0)
 	{
@@ -231,7 +311,9 @@ void client_requests(socket_info& server_socket)
 			}
 			else if (request == 'u')
 			{
-
+				send_account_number(server_socket);
+				send_new_balance(server_socket);
+				receive_process_result(server_socket, 'u');
 			}
 			else
 			{

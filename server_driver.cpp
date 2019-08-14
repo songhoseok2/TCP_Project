@@ -25,6 +25,7 @@ void update_balance_data(double memory[NUMMEMORY])
 	{
 		outfile << fixed << setprecision(2) << memory[i] << endl;
 	}
+	outfile.close();
 }
 
 void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS])
