@@ -36,13 +36,11 @@ void send_process_result(const char request_result_buff[2],
 	vector<socket_info>& connected_client_sockets,
 	mutex& master_mutex);
 
-bool receive_account_number(int& account_number,
-	const int thread_number,
+int receive_account_number(const int thread_number,
 	mutex& master_mutex,
 	vector<socket_info>& connected_client_sockets);
 
-bool receive_new_balance(double& new_balance,
-	const int thread_number,
+double receive_new_balance(const int thread_number,
 	mutex& master_mutex,
 	vector<socket_info>& connected_client_sockets);
 

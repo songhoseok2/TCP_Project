@@ -105,7 +105,7 @@ char write_account(const int account_number,
 {
 	load_onto_cache(account_number, memory, cache);
 	int set_id = get_set_id(account_number);
-	int cache_tag_index = get_cache_tag_index(account_number, cache[set_id].tag_blocks);
+	int cache_tag_index = get_cache_tag_index(get_tag_id(account_number), cache[set_id].tag_blocks);
 	//if the account balance is already the inteded new_balance, there is no need for an update.
 	if (cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] == new_balance) { return 'n'; }
 	

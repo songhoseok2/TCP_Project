@@ -41,7 +41,7 @@ void server_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const 
 int get_account_number()
 {
 	string account_number_str;
-	cout << "Enter the number of the account you wish to read: ";
+	cout << "Enter the number of the account you wish to access: ";
 	while (getline(cin, account_number_str))
 	{
 		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
@@ -66,7 +66,7 @@ bool is_valid_balance(const string input)
 		string::const_iterator dec_point_it = find(input.begin(), input.end(), '.');
 		if (dec_point_it + 1 == input.end()) { return false; }
 		string::const_iterator it = find_if(input.begin(), dec_point_it, [](char c) { return !isdigit(c); });
-		if (it == dec_point_it) { return false; }
+		if (it != dec_point_it) { return false; }
 		else
 		{
 			if (dec_point_it + 2 == input.end())
@@ -75,7 +75,7 @@ bool is_valid_balance(const string input)
 			}
 			else if (dec_point_it + 3 == input.end())
 			{
-				return isdigit(input[(int)input.size() - 2] && isdigit(input.back()));
+				return isdigit(input[(int)input.size() - 2]) && isdigit(input.back());
 			}
 			else
 			{
@@ -94,7 +94,7 @@ double get_new_balance()
 {
 	string new_balance;
 
-	cout << "Please enter the amount of the new balance: ";
+	cout << "Please enter the amount of the new balance: $";
 	while (getline(cin, new_balance))
 	{
 		if (is_valid_balance(new_balance)) { break; }
@@ -277,7 +277,7 @@ void send_account_number(socket_info& server_socket)
 
 void send_new_balance(socket_info& server_socket)
 {
-	int new_balance = get_new_balance();
+	double new_balance = get_new_balance();
 
 	int bytes_sent = send(server_socket.sock, (char*)& new_balance, sizeof(new_balance), 0);
 	if (bytes_sent == SOCKET_ERROR)

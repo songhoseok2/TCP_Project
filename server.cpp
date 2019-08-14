@@ -157,66 +157,50 @@ void send_process_result(const char process_result_buff[2],
 	cout << "Sent process result " << process_result_buff << " to client " << connected_client_sockets[thread_number].IP_address << "." << endl;
 }
 
-bool receive_account_number(int &account_number,
-	const int thread_number,
+int receive_account_number(const int thread_number,
 	mutex& master_mutex,
 	vector<socket_info>& connected_client_sockets)
 {
+	int account_number = -1;
 	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& account_number, sizeof(account_number), 0);
 	if (bytes_received == SOCKET_ERROR)
 	{
-		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
-		return false;
+		char process_result_buff[2];
+		process_result_buff[0] = 'f';
+		process_result_buff[1] = '\0';
+		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
 	}
 	else if (bytes_received == 0)
 	{
 		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-		return false;
 	}
 
-	if (account_number == -1)
-	{
-		char process_result_buff[2];
-		process_result_buff[0] = 'f';
-		process_result_buff[1] = '\0';
-		cout << "Error in receiving account number.";
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
-		return false;
-	}
-
-	return true;
+	return account_number;
 }
 
-bool receive_new_balance(double &new_balance,
-	const int thread_number,
+double receive_new_balance(const int thread_number,
 	mutex& master_mutex,
 	vector<socket_info>& connected_client_sockets)
 {
+	double new_balance = -1;
 	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& new_balance, sizeof(new_balance), 0);
 	if (bytes_received == SOCKET_ERROR)
 	{
-		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
-		return false;
+		char process_result_buff[2];
+		process_result_buff[0] = 'f';
+		process_result_buff[1] = '\0';
+		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
 	}
 	else if (bytes_received == 0)
 	{
 		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-		return false;
 	}
 
-	if (new_balance == -1)
-	{
-		char process_result_buff[2];
-		process_result_buff[0] = 'f';
-		process_result_buff[1] = '\0';
-		cout << "Error in receiving account number.";
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
-		return false;
-	}
-
-	return true;
+	return new_balance;
 }
 
 char receive_message(const int thread_number,
@@ -274,8 +258,8 @@ void process_request_r(const int thread_number,
 {
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
-	int account_number = -1;
-	if (!receive_account_number(account_number, thread_number, master_mutex, connected_client_sockets)) { return; }
+	int account_number = receive_account_number(thread_number, master_mutex, connected_client_sockets);
+	if (account_number == -1) { return; }
 	cout << "Client " << connected_client_sockets[thread_number].IP_address << " requested the balance of account number " << account_number << "." << endl;
 
 	double requested_balance = read_account(account_number, master_mutex, memory, cache);
@@ -309,11 +293,11 @@ void process_request_u(const int thread_number,
 {
 	char process_result_buff[2];
 
-	int account_number = -1;
-	double new_balance = -1;
+	int account_number = receive_account_number(thread_number, master_mutex, connected_client_sockets);
+	if (account_number == -1) { return; }
+	double new_balance = receive_new_balance(thread_number, master_mutex, connected_client_sockets);
+	if (new_balance == -1) { return; }
 
-	if (!receive_account_number(account_number, thread_number, master_mutex, connected_client_sockets)) { return; }
-	if (!receive_new_balance(new_balance, thread_number, master_mutex, connected_client_sockets)) { return; }
 	process_result_buff[0] = write_account(account_number, new_balance, memory, cache);
 	process_result_buff[1] = '\0';
 	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
