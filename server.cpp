@@ -174,7 +174,7 @@ int receive_account_number(const int thread_number,
 	}
 	else if (bytes_received == 0)
 	{
-		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
+		//client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
 	}
 
 	return account_number;
@@ -195,10 +195,8 @@ double receive_new_balance(const int thread_number,
 		process_result_buff[1] = '\0';
 		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
 	}
-	else if (bytes_received == 0)
-	{
-		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-	}
+	//if client is disconnected and bytes_received == 0 
+	//the disconnection message will be sent out in accept_requests function
 
 	return new_balance;
 }
@@ -219,7 +217,6 @@ char receive_message(const int thread_number,
 	}
 	else if (bytes_received == 0)
 	{
-		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
 		return 'd'; //disconnected from client
 	}
 

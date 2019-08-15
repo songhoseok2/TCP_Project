@@ -110,7 +110,7 @@ char write_account(const int account_number,
 	if (cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] == new_balance) { return 'n'; }
 	
 	cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] = new_balance;
-	cache[set_id].tag_blocks->dirty = true;
+	cache[set_id].tag_blocks[cache_tag_index].dirty = true;
 	update_LRU(cache_tag_index, cache[set_id]);
 	return 's';
 }

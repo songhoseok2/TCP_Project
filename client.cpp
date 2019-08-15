@@ -29,13 +29,39 @@ socket_info create_server_socket()
 	inet_pton(AF_INET, IP_address.c_str(), &server_socket.sock_addr.sin_addr);
 	inet_pton(AF_INET, IP_address.c_str(),server_socket.IP_address);
 	server_socket.port_num = port_num;
-	cout << "Server socket initialized." << endl;
+	cout << "Server socket initialized.";
 	return server_socket;
 }
 
-void server_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const int port_num)
+void connect_to_server(socket_info& server_socket)
 {
-	cout << "Server " << IP_address << " has disconnected from port " << port_num << "." << endl;
+	server_socket = create_server_socket();
+	cout << " Connecting...";
+	int connection_result = connect(server_socket.sock, (sockaddr*)& server_socket.sock_addr, sizeof(server_socket.sock_addr));
+	if (connection_result == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Connection to server failed. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+	cout << "Success." << endl;
+}
+
+void server_disconnection(socket_info &server_socket, const char IP_address[INET_ADDRSTRLEN], const int port_num)
+{
+	cout << "Server " << IP_address << " has disconnected from port " << port_num << ". Reconnect?" << endl;
+	cout << "Enter y to reconnnect, and any other key to exit: ";
+	char answer;
+	cin >> answer;
+	if (answer == 'y')
+	{
+		connect_to_server(server_socket);
+	}
+	else
+	{
+		cout << "Closing client." << endl;
+		closesocket(server_socket.sock);
+		WSACleanup();
+		exit(0);
+	}
 }
 
 int get_account_number()
@@ -119,7 +145,7 @@ bool send_request(socket_info& server_socket, const char request)
 	}
 	else if (bytes_sent == 0)
 	{
-		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 	}
 	else
 	{
@@ -133,7 +159,7 @@ bool send_request(socket_info& server_socket, const char request)
 		}
 		else if (bytes_received == 0)
 		{
-			server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+			server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 		}
 		else
 		{
@@ -174,7 +200,7 @@ void send_message(socket_info &server_socket)
 		}
 		else if (bytes_sent == 0)
 		{
-			server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+			server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 		}
 		else
 		{
@@ -195,7 +221,7 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 	}
 	else if (bytes_received == 0)
 	{
-		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 	}
 	else if(string(request_result_buff, 0, bytes_received) == "s")
 	{
@@ -253,7 +279,7 @@ void receive_account_balance(socket_info& server_socket)
 	}
 	else if (bytes_received == 0)
 	{
-		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 		return;
 	}
 
@@ -271,7 +297,7 @@ void send_account_number(socket_info& server_socket)
 	}
 	else if (bytes_sent == 0)
 	{
-		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 	}
 }
 
@@ -286,7 +312,7 @@ void send_new_balance(socket_info& server_socket)
 	}
 	else if (bytes_sent == 0)
 	{
-		server_disconnection_message(server_socket.IP_address, server_socket.port_num);
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 	}
 }
 

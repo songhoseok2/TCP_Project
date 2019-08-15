@@ -59,14 +59,14 @@ int main()
 
 	listen(listening_socket.sock, SOMAXCONN);
 	mutex master_mutex; //mutex and shared data protections will be segmented and implemented properly in the future
-	thread client_connection_thread = thread(	wait_for_clients,
-												ref(connected_client_sockets),
-												ref(socket_threads),
-												ref(listening_socket),
-												ref(master_mutex),
-												memory,
-												cache);
-	
+	thread client_connection_thread = thread(wait_for_clients,
+		ref(connected_client_sockets),
+		ref(socket_threads),
+		ref(listening_socket),
+		ref(master_mutex),
+		memory,
+		cache);
+
 	client_connection_thread.join();
 	WSACleanup();
 	update_balance_data(memory);

@@ -12,7 +12,9 @@ using namespace std;
 
 socket_info create_server_socket();
 
-void server_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const int port_num);
+void connect_to_server(socket_info& server_socket);
+
+void server_disconnection(socket_info& server_socket, const char IP_address[INET_ADDRSTRLEN], const int port_num);
 
 bool receive_process_result(socket_info& server_socket, const char current_request);
 
