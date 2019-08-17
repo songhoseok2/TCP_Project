@@ -29,6 +29,7 @@ socket_info create_server_socket()
 	inet_pton(AF_INET, IP_address.c_str(), &server_socket.sock_addr.sin_addr);
 	inet_pton(AF_INET, IP_address.c_str(),server_socket.IP_address);
 	server_socket.port_num = port_num;
+	strcpy_s(server_socket.IP_address, IP_address.c_str());
 	cout << "Server socket initialized.";
 	return server_socket;
 }
@@ -49,10 +50,11 @@ void server_disconnection(socket_info &server_socket, const char IP_address[INET
 {
 	cout << "Server " << IP_address << " has disconnected from port " << port_num << ". Reconnect?" << endl;
 	cout << "Enter y to reconnnect, and any other key to exit: ";
-	char answer;
-	cin >> answer;
-	if (answer == 'y')
+	string answer;
+	getline(cin, answer);
+	if (answer == "y")
 	{
+		closesocket(server_socket.sock);
 		connect_to_server(server_socket);
 	}
 	else
