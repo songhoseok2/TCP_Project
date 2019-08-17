@@ -161,7 +161,7 @@ int receive_account_number(const int thread_number,
 	mutex& master_mutex,
 	vector<socket_info>& connected_client_sockets)
 {
-	int account_number = -1;
+	int account_number = -2;
 	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& account_number, sizeof(account_number), 0);
 	if (bytes_received == SOCKET_ERROR)
 	{
@@ -172,10 +172,7 @@ int receive_account_number(const int thread_number,
 		process_result_buff[1] = '\0';
 		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
 	}
-	else if (bytes_received == 0)
-	{
-		//client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-	}
+	//cilent disconnection message will be handled in process_requests function
 
 	return account_number;
 }
@@ -219,6 +216,11 @@ char receive_message(const int thread_number,
 	{
 		return 'd'; //disconnected from client
 	}
+	else if (string(msg_buff) == "ABORT") 
+	{ 
+		cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " aborted the message transmission. " << endl;
+		return 'a'; 
+	}
 
 	cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " messaged: \"" << msg_buff << "\"" << endl;
 	return 's'; //message received successfully
@@ -231,7 +233,7 @@ void process_request_m(const int thread_number,
 	char process_result_buff[2];
 	process_result_buff[0] = receive_message(thread_number, connected_client_sockets, master_mutex);
 	process_result_buff[1] = '\0';
-	if (process_result_buff[0] != 'd')
+	if (process_result_buff[0] != 'd' && process_result_buff[0] != 'a')
 	{
 		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
 	}
@@ -256,7 +258,12 @@ void process_request_r(const int thread_number,
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
 	int account_number = receive_account_number(thread_number, master_mutex, connected_client_sockets);
-	if (account_number == -1) { return; }
+	if (account_number == -2) { return; }
+	else if (account_number == -1) 
+	{
+		cout << "Client " << connected_client_sockets[thread_number].IP_address << " aborted the access to the accounts." << endl;
+		return; 
+	}
 	cout << "Client " << connected_client_sockets[thread_number].IP_address << " requested the balance of account number " << account_number << "." << endl;
 
 	double requested_balance = read_account(account_number, master_mutex, memory, cache);
@@ -291,7 +298,12 @@ void process_request_u(const int thread_number,
 	char process_result_buff[2];
 
 	int account_number = receive_account_number(thread_number, master_mutex, connected_client_sockets);
-	if (account_number == -1) { return; }
+	if (account_number == -2) { return; }
+	else if (account_number == -1)
+	{
+		cout << "Client " << connected_client_sockets[thread_number].IP_address << " aborted the access to the accounts." << endl;
+		return;
+	}
 	double new_balance = receive_new_balance(thread_number, master_mutex, connected_client_sockets);
 	if (new_balance == -1) { return; }
 
