@@ -26,11 +26,11 @@ double get_new_balance();
 
 bool send_request(socket_info& server_socket, const char current_request);
 
-void send_message(socket_info& server_socket);
+bool send_message(socket_info& server_socket);
 
 void receive_account_balance(socket_info& server_socket);
 
-void send_account_number(socket_info& server_socket);
+bool send_account_number(socket_info& server_socket);
 
 void send_new_balance(socket_info& server_socket);
 

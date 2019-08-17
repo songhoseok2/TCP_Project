@@ -67,9 +67,10 @@ void server_disconnection(socket_info &server_socket, const char IP_address[INET
 int get_account_number()
 {
 	string account_number_str;
-	cout << "Enter the number of the account you wish to access: ";
+	cout << "Enter the number of the account you wish to access. Enter -1 to abort: ";
 	while (getline(cin, account_number_str))
 	{
+		if (account_number_str == "-1") { break; }
 		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
 		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
 		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
@@ -84,14 +85,14 @@ bool is_valid_balance(const string input)
 
 	if (num_of_point == 0)
 	{
-		string::const_iterator it = find_if(input.begin(), input.end(), [](char c) { return !isdigit(c); });
+		string::const_iterator it = find_if(input.begin(), input.end(), is_char());
 		return it == input.end();
 	}
 	else if (num_of_point == 1)
 	{
 		string::const_iterator dec_point_it = find(input.begin(), input.end(), '.');
 		if (dec_point_it + 1 == input.end()) { return false; }
-		string::const_iterator it = find_if(input.begin(), dec_point_it, [](char c) { return !isdigit(c); });
+		string::const_iterator it = find_if(input.begin(), dec_point_it, is_char());
 		if (it != dec_point_it) { return false; }
 		else
 		{
@@ -181,32 +182,29 @@ bool send_request(socket_info& server_socket, const char request)
 	return false;
 }
 
-void send_message(socket_info &server_socket)
+bool send_message(socket_info &server_socket)
 {
 	char msg_buff[4096];
 	string user_msg = get_message();
 	strcpy_s(msg_buff, user_msg.c_str());
-	if (user_msg == "ABORT")
+
+	//Send the message
+	int bytes_sent = send(server_socket.sock, msg_buff, sizeof(msg_buff), 0);
+	if (bytes_sent == SOCKET_ERROR)
 	{
-		return;
+		exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
+	}
+	else if (bytes_sent == 0)
+	{
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 	}
 	else
 	{
-		//Send the message
-		int bytes_sent = send(server_socket.sock, msg_buff, sizeof(msg_buff), 0);
-		if (bytes_sent == SOCKET_ERROR)
-		{
-			exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-		}
-		else if (bytes_sent == 0)
-		{
-			server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
-		}
-		else
-		{
+		user_msg == "ABORT" ? cout << "Message transmission aborted." << endl :
 			cout << "Message successfully sent to server." << endl;
-		}
 	}
+
+	return user_msg != "ABORT";
 }
 
 bool receive_process_result(socket_info& server_socket, const char current_request)
@@ -286,10 +284,9 @@ void receive_account_balance(socket_info& server_socket)
 	cout << "Requested balance: $" << fixed << setprecision(2) << balance_buff << endl;
 }
 
-void send_account_number(socket_info& server_socket)
+bool send_account_number(socket_info& server_socket)
 {
 	int account_number = get_account_number();
-
 	int bytes_sent = send(server_socket.sock, (char*)& account_number, sizeof(account_number), 0);
 	if (bytes_sent == SOCKET_ERROR)
 	{
@@ -299,6 +296,8 @@ void send_account_number(socket_info& server_socket)
 	{
 		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 	}
+
+	return account_number != -1;
 }
 
 void send_new_balance(socket_info& server_socket)
@@ -324,22 +323,26 @@ void client_requests(socket_info& server_socket)
 		{
 			if (request == 'm')
 			{
-				send_message(server_socket);
-				receive_process_result(server_socket, 'm');
+				if (send_message(server_socket))
+				{
+					receive_process_result(server_socket, 'm');
+				}				
 			}
 			else if (request == 'r')
 			{
-				send_account_number(server_socket);
-				if (receive_process_result(server_socket, 'r'))
+				if (send_account_number(server_socket) &&
+					receive_process_result(server_socket, 'r'))
 				{
 					receive_account_balance(server_socket);
 				}	
 			}
 			else if (request == 'u')
 			{
-				send_account_number(server_socket);
-				send_new_balance(server_socket);
-				receive_process_result(server_socket, 'u');
+				if (send_account_number(server_socket))
+				{
+					send_new_balance(server_socket);
+					receive_process_result(server_socket, 'u');
+				}
 			}
 			else
 			{
