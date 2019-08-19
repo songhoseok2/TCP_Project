@@ -12,6 +12,11 @@ void exit_with_err_msg(const string msg)
 	exit(1);
 }
 
+bool is_disconnected(const int bytes)
+{
+	return (bytes == SOCKET_ERROR && (int)WSAGetLastError() == 10054) || bytes == 0;
+}
+
 bool is_char::operator()(char c) { return !isdigit(c); }
 
 void initialize_winsock()

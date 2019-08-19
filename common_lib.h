@@ -19,6 +19,8 @@ using namespace std;
 
 void exit_with_err_msg(const string msg);
 
+bool is_disconnected(const int bytes);
+
 struct is_char { bool operator()(char c); };
 
 struct socket_info

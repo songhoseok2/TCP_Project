@@ -4,11 +4,14 @@
 
 //Error handling communication must be standardized
 
+//how to exit the server
+//disconnection / reconnection handling in client
+
 using namespace std;
 
-void client_disconnection_message(const char IP_address[INET_ADDRSTRLEN], const int port_num)
+void client_disconnection_message(socket_info* const client_socket)
 {
-	cout << "Client " << IP_address << " has disconnected from port " << port_num << "." << endl;
+	cout << "Client " << client_socket->IP_address << " has disconnected from port " << client_socket->port_num << "." << endl;
 }
 
 socket_info create_listening_socket()
@@ -32,12 +35,12 @@ socket_info create_listening_socket()
 	return listening_socket;
 }
 
-void set_client_connection_info(socket_info& client_socket)
+void set_client_connection_info(socket_info* client_socket)
 {
-	struct sockaddr_in* pV4Addr = (struct sockaddr_in*) & client_socket.sock_addr;
+	struct sockaddr_in* pV4Addr = (struct sockaddr_in*) & client_socket->sock_addr;
 	struct in_addr ipAddr = pV4Addr->sin_addr;
-	inet_ntop(AF_INET, &ipAddr, client_socket.IP_address, INET_ADDRSTRLEN);
-	client_socket.port_num = ntohs(client_socket.sock_addr.sin_port);
+	inet_ntop(AF_INET, &ipAddr, client_socket->IP_address, INET_ADDRSTRLEN);
+	client_socket->port_num = ntohs(client_socket->sock_addr.sin_port);
 }
 
 //order of processing request:
@@ -46,8 +49,9 @@ void set_client_connection_info(socket_info& client_socket)
 //process request
 //send request result to client
 
-void accept_requests(const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+void accept_requests(vector<socket_info>& connected_client_sockets,
+	vector<thread>& socket_threads,
+	socket_info* client_socket,
 	mutex& master_mutex,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
@@ -56,44 +60,53 @@ void accept_requests(const int thread_number,
 	for (ZeroMemory(request_buff, 2); true; ZeroMemory(request_buff, 2))
 	{
 		//receive request from client
-		int bytes_received = recv(connected_client_sockets[thread_number].sock, request_buff, sizeof(request_buff), 0);
-		if (bytes_received == SOCKET_ERROR)
+		int bytes_received = recv(client_socket->sock, request_buff, sizeof(request_buff), 0);
+		
+		if (is_disconnected(bytes_received))
 		{
-			cout << "ERROR in receiving request from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+			client_disconnection_message(client_socket);
+			break;
+		}
+		else if (bytes_received == SOCKET_ERROR)
+		{
+			cout << "ERROR in receiving request from client " << client_socket->IP_address << ". Exiting." << endl;
 			cout << "ERROR number: " << WSAGetLastError() << endl;
 			break;
 		}
-		else if (bytes_received == 0)
-		{
-			client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-			break;
-		}
 
-		cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " requested " << request_buff << "." << endl;
+		cout << client_socket->IP_address << ", Thread_ID " << this_thread::get_id() << " requested " << request_buff << "." << endl;
 
 		char request_acceptance_result_buff[2];
 		request_acceptance_result_buff[0] = 'y';
 		request_acceptance_result_buff[1] = '\0';
 
 		//send request acceptance result to client
-		int bytes_sent = send(connected_client_sockets[thread_number].sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff), 0);
-		if (bytes_sent == SOCKET_ERROR)
+		int bytes_sent = send(client_socket->sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff), 0);
+		if (is_disconnected(bytes_sent))
 		{
-			cout << "ERROR in sending request acceptance result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
-			cout << "ERROR number: " << WSAGetLastError() << endl;
+			client_disconnection_message(client_socket);
 			break;
 		}
-		else if (bytes_sent == 0)
+		else if (bytes_sent == SOCKET_ERROR)
 		{
-			client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
+			cout << "ERROR in sending request acceptance result to client " << client_socket->IP_address << ". Exiting." << endl;
+			cout << "ERROR number: " << WSAGetLastError() << endl;	
 			break;
 		}
 
 		char current_request = request_buff[0];
-		cout << current_request << " request from " << connected_client_sockets[thread_number].IP_address << " accepted. Processing." << endl;
-		process_requests(current_request, thread_number, connected_client_sockets, master_mutex, memory, cache);
+		cout << current_request << " request from " << client_socket->IP_address << " accepted. Processing." << endl;
+		process_requests(current_request, client_socket, master_mutex, memory, cache);
 		//process results will be sent in send_process_result function within process_requests function above
 	}
+
+	closesocket(client_socket->sock);
+	connected_client_sockets.erase(find_if(connected_client_sockets.begin(), connected_client_sockets.end(), [client_socket](const socket_info& current_socket) {return current_socket.sock == client_socket->sock; }));
+	
+	vector<thread>::iterator it = find_if(socket_threads.begin(), socket_threads.end(),
+		[](const thread& current_thread) { return current_thread.get_id() == this_thread::get_id(); });
+	it->detach();
+	socket_threads.erase(it);
 }
 
 //code to wait for and connect to clients real time
@@ -104,7 +117,6 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
 {
-	int thread_number = 0;
 	while (true)
 	{
 		//Wait for connection
@@ -117,22 +129,21 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets,
 			exit_with_err_msg("client_socket creation failed.");
 		}
 
-		set_client_connection_info(client_socket);
+		set_client_connection_info(&client_socket);
 		cout << "Client IP address " << client_socket.IP_address << " has connected to port " << client_socket.port_num << "." << endl;
 
 		master_mutex.lock();
 		connected_client_sockets.push_back(client_socket);
 
 		//new thread for each client connection
-		socket_threads.push_back(thread(accept_requests, thread_number++, ref(connected_client_sockets), ref(master_mutex), memory, cache));
+		socket_threads.push_back(thread(accept_requests, ref(connected_client_sockets), ref(socket_threads), &(connected_client_sockets.back()), ref(master_mutex), memory, cache));
 
 		master_mutex.unlock();
 	}
 }
 
 void send_process_result(const char process_result_buff[2],
-	const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+	socket_info* client_socket,
 	mutex& master_mutex)
 {
 	//send process result to client
@@ -141,56 +152,52 @@ void send_process_result(const char process_result_buff[2],
 	temp_process_result_buff[1] = process_result_buff[1];
 
 	//if process_result_buff (function argument) is directly passed onto send(), it's 4 bytes instead of 2
-	int bytes_sent = send(connected_client_sockets[thread_number].sock, temp_process_result_buff, sizeof(temp_process_result_buff), 0);
-	if (bytes_sent == SOCKET_ERROR)
+	int bytes_sent = send(client_socket->sock, temp_process_result_buff, sizeof(temp_process_result_buff), 0);
+	if (is_disconnected(bytes_sent)) { return; }
+	else if (bytes_sent == SOCKET_ERROR)
 	{
-		cout << "ERROR in sending request result to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR in sending request result to client " << client_socket->IP_address << ". Exiting." << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
 		return;
 	}
-	else if (bytes_sent == 0)
-	{
-		client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-		return;
-	}
 
-	cout << "Sent process result " << process_result_buff << " to client " << connected_client_sockets[thread_number].IP_address << "." << endl;
+	cout << "Sent process result " << process_result_buff << " to client " << client_socket->IP_address << "." << endl;
 }
 
-int receive_account_number(const int thread_number,
-	mutex& master_mutex,
-	vector<socket_info>& connected_client_sockets)
+int receive_account_number(mutex& master_mutex,
+	socket_info* client_socket)
 {
 	int account_number = -2;
-	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& account_number, sizeof(account_number), 0);
-	if (bytes_received == SOCKET_ERROR)
+	int bytes_received = recv(client_socket->sock, (char*)& account_number, sizeof(account_number), 0);
+	if (is_disconnected(bytes_received)) { return account_number; }
+	else if (bytes_received == SOCKET_ERROR)
 	{
-		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << endl;
+		cout << "ERROR in receiving account_number from client " << client_socket->IP_address << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
 		char process_result_buff[2];
 		process_result_buff[0] = 'f';
 		process_result_buff[1] = '\0';
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+		send_process_result(process_result_buff, client_socket, master_mutex);
 	}
 	//cilent disconnection message will be handled in process_requests function
 
 	return account_number;
 }
 
-double receive_new_balance(const int thread_number,
-	mutex& master_mutex,
-	vector<socket_info>& connected_client_sockets)
+double receive_new_balance(mutex& master_mutex,
+	socket_info* client_socket)
 {
 	double new_balance = -1;
-	int bytes_received = recv(connected_client_sockets[thread_number].sock, (char*)& new_balance, sizeof(new_balance), 0);
-	if (bytes_received == SOCKET_ERROR)
+	int bytes_received = recv(client_socket->sock, (char*)& new_balance, sizeof(new_balance), 0);
+	if (is_disconnected(bytes_received)) { return new_balance; }
+	else if (bytes_received == SOCKET_ERROR)
 	{
-		cout << "ERROR in receiving account_number from client " << connected_client_sockets[thread_number].IP_address << endl;
+		cout << "ERROR in receiving account_number from client " << client_socket->IP_address << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
 		char process_result_buff[2];
 		process_result_buff[0] = 'f';
 		process_result_buff[1] = '\0';
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+		send_process_result(process_result_buff, client_socket, master_mutex);
 	}
 	//if client is disconnected and bytes_received == 0 
 	//the disconnection message will be sent out in accept_requests function
@@ -198,44 +205,39 @@ double receive_new_balance(const int thread_number,
 	return new_balance;
 }
 
-char receive_message(const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+char receive_message(socket_info* client_socket,
 	mutex& master_mutex)
 {
 	char msg_buff[4096];
 
 	//receive message sent from the client
-	int bytes_received = recv(connected_client_sockets[thread_number].sock, msg_buff, sizeof(msg_buff), 0);
-	if (bytes_received == SOCKET_ERROR)
+	int bytes_received = recv(client_socket->sock, msg_buff, sizeof(msg_buff), 0);
+	if (is_disconnected(bytes_received)) { return 'd'; }
+	else if (bytes_received == SOCKET_ERROR)
 	{
-		cout << "ERROR in receiving request from client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+		cout << "ERROR in receiving message from client " << client_socket->IP_address << ". Exiting." << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
 		return 'f'; //failed to receive the message
 	}
-	else if (bytes_received == 0)
-	{
-		return 'd'; //disconnected from client
-	}
 	else if (string(msg_buff) == "ABORT") 
 	{ 
-		cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " aborted the message transmission. " << endl;
+		cout << client_socket->IP_address << ", Thread_ID " << this_thread::get_id() << " aborted the message transmission. " << endl;
 		return 'a'; 
 	}
 
-	cout << connected_client_sockets[thread_number].IP_address << ", thread_number " << thread_number << " messaged: \"" << msg_buff << "\"" << endl;
+	cout << client_socket->IP_address << ", Thread_ID " << this_thread::get_id() << " messaged: \"" << msg_buff << "\"" << endl;
 	return 's'; //message received successfully
 }
 
-void process_request_m(const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+void process_request_m(socket_info* client_socket,
 	mutex& master_mutex)
 {
 	char process_result_buff[2];
-	process_result_buff[0] = receive_message(thread_number, connected_client_sockets, master_mutex);
+	process_result_buff[0] = receive_message(client_socket, master_mutex);
 	process_result_buff[1] = '\0';
 	if (process_result_buff[0] != 'd' && process_result_buff[0] != 'a')
 	{
-		send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+		send_process_result(process_result_buff, client_socket, master_mutex);
 	}
 }
 
@@ -249,72 +251,66 @@ double read_account(const int account_number,
 	return requested_balance;
 }
 
-void process_request_r(const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+void process_request_r(socket_info* client_socket,
 	mutex& master_mutex,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
 {
 	char process_result_buff[2];
 	process_result_buff[1] = '\0';
-	int account_number = receive_account_number(thread_number, master_mutex, connected_client_sockets);
+	int account_number = receive_account_number(master_mutex, client_socket);
 	if (account_number == -2) { return; }
 	else if (account_number == -1) 
 	{
-		cout << "Client " << connected_client_sockets[thread_number].IP_address << " aborted the access to the accounts." << endl;
+		cout << "Client " << client_socket->IP_address << " aborted the access to the accounts." << endl;
 		return; 
 	}
-	cout << "Client " << connected_client_sockets[thread_number].IP_address << " requested the balance of account number " << account_number << "." << endl;
+	cout << "Client " << client_socket->IP_address << " requested the balance of account number " << account_number << "." << endl;
 
 	double requested_balance = read_account(account_number, master_mutex, memory, cache);
 	process_result_buff[0] = requested_balance == -1 ? 'f' : 's'; //failed if -1, success if not
-	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+	send_process_result(process_result_buff, client_socket, master_mutex);
 
 	if (requested_balance != -1)
 	{
-		int bytes_sent = send(connected_client_sockets[thread_number].sock, (char*)& requested_balance, sizeof(requested_balance), 0);
-		if (bytes_sent == SOCKET_ERROR)
+		int bytes_sent = send(client_socket->sock, (char*)& requested_balance, sizeof(requested_balance), 0);
+		
+		if (is_disconnected(bytes_sent)) { return; }
+		else if (bytes_sent == SOCKET_ERROR)
 		{
-			cout << "ERROR in sending requested balance to client " << connected_client_sockets[thread_number].IP_address << ". Exiting." << endl;
+			cout << "ERROR in sending requested balance to client " << client_socket->IP_address << ". Exiting." << endl;
 			cout << "ERROR number: " << WSAGetLastError() << endl;
 			return;
 		}
-		else if (bytes_sent == 0)
-		{
-			client_disconnection_message(connected_client_sockets[thread_number].IP_address, connected_client_sockets[thread_number].port_num);
-			return;
-		}
 
-		cout << "Sent requested_balance of $" << requested_balance << " to client " << connected_client_sockets[thread_number].IP_address << "." << endl;
+		cout << "Sent requested_balance of $" << requested_balance << " to client " << client_socket->IP_address << "." << endl;
 	}
 }
 
-void process_request_u(const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+void process_request_u(socket_info* client_socket,
 	mutex& master_mutex,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
 {
 	char process_result_buff[2];
 
-	int account_number = receive_account_number(thread_number, master_mutex, connected_client_sockets);
+	int account_number = receive_account_number(master_mutex, client_socket);
 	if (account_number == -2) { return; }
 	else if (account_number == -1)
 	{
-		cout << "Client " << connected_client_sockets[thread_number].IP_address << " aborted the access to the accounts." << endl;
+		cout << "Client " << client_socket->IP_address << " aborted the access to the accounts." << endl;
 		return;
 	}
-	double new_balance = receive_new_balance(thread_number, master_mutex, connected_client_sockets);
+	double new_balance = receive_new_balance(master_mutex, client_socket);
 	if (new_balance == -1) { return; }
 
 	process_result_buff[0] = write_account(account_number, new_balance, memory, cache);
 	process_result_buff[1] = '\0';
-	send_process_result(process_result_buff, thread_number, connected_client_sockets, master_mutex);
+	send_process_result(process_result_buff, client_socket, master_mutex);
 }
 
 void process_requests(const char current_request,
-	const int thread_number,
-	vector<socket_info>& connected_client_sockets,
+	socket_info* client_socket,
 	mutex& master_mutex,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
@@ -322,19 +318,19 @@ void process_requests(const char current_request,
 	master_mutex.lock();
 	if (current_request == 'm') //message
 	{
-		process_request_m(thread_number, connected_client_sockets, master_mutex);
+		process_request_m(client_socket, master_mutex);
 	}
 	else if (current_request == 'r') //read
 	{
-		process_request_r(thread_number, connected_client_sockets, master_mutex, memory, cache);
+		process_request_r(client_socket, master_mutex, memory, cache);
 	}
 	else if (current_request == 'u') //update
 	{
-		process_request_u(thread_number, connected_client_sockets, master_mutex, memory, cache);
+		process_request_u(client_socket, master_mutex, memory, cache);
 	}
 	else
 	{
-		exit_with_err_msg("Client " + string(connected_client_sockets[thread_number].IP_address) + " has sent an invalid request. Request sent: " + current_request);
+		exit_with_err_msg("Client " + string(client_socket->IP_address) + " has sent an invalid request. Request sent: " + current_request);
 	}
 	master_mutex.unlock();
 }

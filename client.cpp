@@ -73,10 +73,21 @@ int get_account_number()
 	while (getline(cin, account_number_str))
 	{
 		if (account_number_str == "-1") { break; }
-		bool invalid_input = any_of(account_number_str.begin(), account_number_str.end(), is_char());
-		if (invalid_input) { cout << "ERROR: Please enter numbers only: "; }
-		if (account_number_str.empty()) { cout << "ERROR: Account number is empty. Please re-enter: "; }
-		else { break; }
+
+		bool valid_input = true;
+
+		if (any_of(account_number_str.begin(), account_number_str.end(), is_char())) 
+		{
+			valid_input = false;
+			cout << "ERROR: Please enter numbers only: ";
+		}
+		if (account_number_str.empty())
+		{
+			valid_input = false;
+			cout << "ERROR: Account number is empty. Please re-enter: "; 
+		}
+		
+		if (valid_input) { break; }
 	}
 	return stoi(account_number_str);
 }
@@ -141,14 +152,14 @@ bool send_request(socket_info& server_socket, const char request)
 	request_buff[0]= request;
 	request_buff[1] = '\0';
 	int bytes_sent = send(server_socket.sock, request_buff, sizeof(request_buff) , 0);
-	if (bytes_sent == SOCKET_ERROR)
-	{
-		exit_with_err_msg("Error in sending request to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-		return false;
-	}
-	else if (bytes_sent == 0)
+	if (is_disconnected(bytes_sent))
 	{
 		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+		return false;
+	}	
+	else if (bytes_sent == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending request to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 	else
 	{
@@ -156,13 +167,14 @@ bool send_request(socket_info& server_socket, const char request)
 		char request_acceptance_result_buff[2];
 		ZeroMemory(request_acceptance_result_buff, 2);
 		int bytes_received = recv(server_socket.sock, request_acceptance_result_buff, sizeof(request_acceptance_result_buff), 0);
-		if (bytes_received == SOCKET_ERROR)
-		{
-			exit_with_err_msg("Error in receiving request acceptance result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-		}
-		else if (bytes_received == 0)
+		if (is_disconnected(bytes_received))
 		{
 			server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+			return false;
+		}
+		else if (bytes_received == SOCKET_ERROR)
+		{
+			exit_with_err_msg("Error in receiving request acceptance result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 		}
 		else
 		{
@@ -179,8 +191,6 @@ bool send_request(socket_info& server_socket, const char request)
 			}		
 		}
 	}
-
-	exit_with_err_msg("Error in send_request function. Exiting.");
 	return false;
 }
 
@@ -192,13 +202,14 @@ bool send_message(socket_info &server_socket)
 
 	//Send the message
 	int bytes_sent = send(server_socket.sock, msg_buff, sizeof(msg_buff), 0);
-	if (bytes_sent == SOCKET_ERROR)
-	{
-		exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-	}
-	else if (bytes_sent == 0)
+	if (is_disconnected(bytes_sent))
 	{
 		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+		return false;
+	}
+	else if (bytes_sent == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending message to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 	else
 	{
@@ -215,13 +226,14 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 	char request_result_buff[2];
 	ZeroMemory(request_result_buff, 2);
 	int bytes_received = recv(server_socket.sock, request_result_buff, sizeof(request_result_buff), 0);
-	if (bytes_received == SOCKET_ERROR)
-	{
-		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-	}
-	else if (bytes_received == 0)
+	if (is_disconnected(bytes_received))
 	{
 		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+		return false;
+	}
+	else if (bytes_received == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in receiving request result from server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 	else if(string(request_result_buff, 0, bytes_received) == "s")
 	{
@@ -271,15 +283,15 @@ void receive_account_balance(socket_info& server_socket)
 	//integer / double to and from network byte order isn't handled yet
 
 	int bytes_received = recv(server_socket.sock, (char*) &balance_buff, sizeof(balance_buff), 0);
-	if (bytes_received == SOCKET_ERROR)
+	if (is_disconnected(bytes_received))
+	{
+		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+		return;
+	}
+	else if (bytes_received == SOCKET_ERROR)
 	{
 		cout << "ERROR in receiving requested balance from server " << server_socket.IP_address << ". Exiting." << endl;
 		cout << "ERROR number: " << WSAGetLastError() << endl;
-		return;
-	}
-	else if (bytes_received == 0)
-	{
-		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
 		return;
 	}
 
@@ -290,13 +302,13 @@ bool send_account_number(socket_info& server_socket)
 {
 	int account_number = get_account_number();
 	int bytes_sent = send(server_socket.sock, (char*)& account_number, sizeof(account_number), 0);
-	if (bytes_sent == SOCKET_ERROR)
-	{
-		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-	}
-	else if (bytes_sent == 0)
+	if (is_disconnected(bytes_sent))
 	{
 		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+	}
+	else if (bytes_sent == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending account number to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 
 	return account_number != -1;
@@ -307,13 +319,13 @@ void send_new_balance(socket_info& server_socket)
 	double new_balance = get_new_balance();
 
 	int bytes_sent = send(server_socket.sock, (char*)& new_balance, sizeof(new_balance), 0);
-	if (bytes_sent == SOCKET_ERROR)
-	{
-		exit_with_err_msg("Error in sending new_balance to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
-	}
-	else if (bytes_sent == 0)
+	if (is_disconnected(bytes_sent))
 	{
 		server_disconnection(server_socket, server_socket.IP_address, server_socket.port_num);
+	}
+	else if (bytes_sent == SOCKET_ERROR)
+	{
+		exit_with_err_msg("Error in sending new_balance to server. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
 }
 
