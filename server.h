@@ -29,6 +29,7 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets,
 	vector<thread>& socket_threads,
 	socket_info& listening_socket,
 	mutex& master_mutex,
+	condition_variable& cv,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS]);
 

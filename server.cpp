@@ -2,11 +2,6 @@
 #include "server.h"
 #include <WS2tcpip.h>
 
-//Error handling communication must be standardized
-
-//how to exit the server
-//disconnection / reconnection handling in client
-
 using namespace std;
 
 void client_disconnection_message(socket_info* const client_socket)
@@ -114,9 +109,12 @@ void wait_for_clients(vector<socket_info>& connected_client_sockets,
 	vector<thread>& socket_threads,
 	socket_info& listening_socket,
 	mutex& master_mutex,
+	condition_variable& cv,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
 {
+	cout << "Accepting client sockets now." << endl;
+	cv.notify_all();
 	while (true)
 	{
 		//Wait for connection

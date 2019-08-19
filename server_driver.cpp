@@ -40,6 +40,45 @@ void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[
 	}
 }
 
+void wait_for_termination_input(thread& client_connection_thread,
+	vector<socket_info>& connected_client_sockets,
+	condition_variable& cv)
+{
+	mutex temp_mutex;
+	unique_lock<mutex> stuff(temp_mutex);
+	cv.wait(stuff);
+	cout << "Enter ESC to terminate this server." << endl;
+
+	while (true)
+	{
+		if (GetAsyncKeyState(VK_ESCAPE))
+		{
+			if (connected_client_sockets.empty()) { return; }
+			else
+			{
+				for (const socket_info& current_socket : connected_client_sockets)
+				{
+					cout << "IP Adress: " << current_socket.IP_address << " on port: " << current_socket.port_num << endl;
+				}
+				cout << "There are " << connected_client_sockets.size() << " socket(s) still connected to this server." << endl;
+				cout << "It is recommended that you terminate the server after all clients finish their operations and disconnect from this server." << endl;
+				cout << "Do you still wish to terminate this server? y/n: " << endl;
+				string answer;
+				while (getline(cin, answer))
+				{
+					if (answer == "y")
+					{
+						for (socket_info& current_socket : connected_client_sockets) { closesocket(current_socket.sock); }
+						return;
+					}
+					else if (answer == "n") { break; }
+					else { cout << "Please answer in y or n: "; }
+				}
+			}
+		}
+	}
+}
+
 int main()
 {
 	vector<socket_info> connected_client_sockets;
@@ -59,15 +98,24 @@ int main()
 
 	listen(listening_socket.sock, SOMAXCONN);
 	mutex master_mutex; //mutex and shared data protections will be segmented and implemented properly in the future
-	thread client_connection_thread = thread(wait_for_clients,
+	
+	condition_variable cv;
+	thread client_connection_thread(wait_for_clients,
 		ref(connected_client_sockets),
 		ref(socket_threads),
 		ref(listening_socket),
 		ref(master_mutex),
+		ref(cv),
 		memory,
 		cache);
 
-	client_connection_thread.join();
+	thread termination_thread(wait_for_termination_input,
+		ref(client_connection_thread),
+		ref(connected_client_sockets), 
+		ref(cv));
+	termination_thread.join();
+
+
 	WSACleanup();
 	update_balance_data(memory);
 	return 0;
