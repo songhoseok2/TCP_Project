@@ -19,8 +19,8 @@ Cache system design:
 	-	Dirty-bit
 */
 
-static mutex read_mutex;
-static mutex thread_vec_mutex;
+extern mutex read_mutex;
+extern mutex thread_vec_mutex;
 
 int get_tag_block_offset(const int account_number);
 

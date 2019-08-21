@@ -17,7 +17,7 @@ using namespace std;
 //this would be better as map so that address of remaining sockets won't be changed when
 // a thread completes and closes & erases its socket
 //much easier for mutual exclusion
-static map<thread::id, socket_info> connected_client_sockets;
+extern map<thread::id, socket_info> connected_client_sockets;
 
 socket_info create_listening_socket();
 

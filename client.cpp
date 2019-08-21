@@ -43,7 +43,7 @@ void connect_to_server(socket_info& server_socket)
 	{
 		exit_with_err_msg("Connection to server failed. Error #" + to_string(WSAGetLastError()) + ". Exiting.");
 	}
-	cout << "Success." << endl;
+	cout << "Success." << endl << endl;
 }
 
 void server_disconnection(socket_info &server_socket, const char IP_address[INET_ADDRSTRLEN], const int port_num)
@@ -217,7 +217,7 @@ bool send_message(socket_info &server_socket)
 	}
 	else
 	{
-		user_msg == "ABORT" ? cout << "Message transmission aborted." << endl :
+		user_msg == "ABORT" ? cout << "Message transmission aborted." << endl << endl :
 			cout << "Message successfully sent to server." << endl;
 	}
 
@@ -244,13 +244,13 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 		switch (current_request)
 		{
 		case 'm':
-			cout << "Server successfully received message." << endl;
+			cout << "Server successfully received message." << endl << endl;
 			break;
 		case 'r':
 			cout << "Server successfully accessed the account." << endl;
 			break;
 		case 'u':
-			cout << "Server successfully updated the account." << endl;
+			cout << "Server successfully updated the account." << endl << endl;
 			break;
 		}
 		
@@ -258,7 +258,7 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 	}
 	else if (string(request_result_buff, 0, bytes_received) == "n")
 	{
-		cout << "Requested account already has the amount of new balance entered. No update has occured." << endl;
+		cout << "Requested account already has the amount of new balance entered. No update has occured." << endl << endl;
 		return true;
 	}
 	else if (string(request_result_buff, 0, bytes_received) == "f")
@@ -266,13 +266,13 @@ bool receive_process_result(socket_info& server_socket, const char current_reque
 		switch (current_request)
 		{
 		case 'm':
-			cout << "Server failed to receive the message." << endl;
+			cout << "Server failed to receive the message." << endl << endl;
 			break;
 		case 'r':
-			cout << "Server failed to access the account." << endl;
+			cout << "Server failed to access the account." << endl << endl;
 			break;
 		case 'u':
-			cout << "Server failed to update the account." << endl;
+			cout << "Server failed to update the account." << endl << endl;
 			break;
 		}
 	}
@@ -299,7 +299,7 @@ void receive_account_balance(socket_info& server_socket)
 		return;
 	}
 
-	cout << "Requested balance: $" << fixed << setprecision(2) << balance_buff << endl;
+	cout << "Requested balance: $" << fixed << setprecision(2) << balance_buff << endl << endl;
 }
 
 bool send_account_number(socket_info& server_socket)

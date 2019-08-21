@@ -10,6 +10,11 @@
 
 using namespace std;
 
+map<thread::id, socket_info> connected_client_sockets;
+
+mutex read_mutex;
+mutex thread_vec_mutex;
+
 void read_in_balance_data(double memory[NUMMEMORY])
 {
 	ifstream infile("balance_data.txt");
@@ -40,28 +45,32 @@ void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[
 	}
 }
 
-void wait_for_termination_input(condition_variable& cv)
+void wait_for_termination_input(vector<thread>& threads_vec, condition_variable& cv)
 {
 	mutex temp_mutex;
 	unique_lock<mutex> stuff(temp_mutex);
 	cv.wait(stuff);
 	//wait because this message should appear AFTER wait_for_clients' message display first
-	cout << "Enter ESC to terminate this server." << endl;
+	cout << "Enter ESC to terminate this server." << endl << endl;
 
 	while (true)
 	{
 		if (GetAsyncKeyState(VK_ESCAPE))
 		{
+			cout << endl;
 			if (connected_client_sockets.empty()) { return; }
 			else
 			{
-				for (map<thread::id, socket_info>::iterator it = connected_client_sockets.begin(); it != connected_client_sockets.end(); ++it)
+				cout << "Connected Clients: " << endl;
+				for (int i = 0 ; i < (int)threads_vec.size(); ++i)
 				{
-					cout << "IP Adress: " << it->second.IP_address << " on port: " << it->second.port_num << endl;
+					socket_info* current_client_socket = &connected_client_sockets[threads_vec[i].get_id()];
+					cout << "IP Adress: " << current_client_socket->IP_address << ", Thread ID: " << threads_vec[i].get_id() 
+						<< " on port: " << current_client_socket->port_num << endl;
 				}
 				cout << "There are " << connected_client_sockets.size() << " socket(s) still connected to this server." << endl;
-				cout << "It is recommended that you terminate the server after all clients finish their operations and disconnect from this server." << endl;
-				cout << "Do you still wish to terminate this server? y/n: " << endl;
+				cout << "It is recommended that you terminate the server after all clients have finished their operations and have been disconnected from this server." << endl;
+				cout << "Do you still wish to terminate this server? y/n: ";
 				string answer;
 				while (getline(cin, answer))
 				{
@@ -73,7 +82,11 @@ void wait_for_termination_input(condition_variable& cv)
 						}
 						return;
 					}
-					else if (answer == "n") { break; }
+					else if (answer == "n")
+					{
+						cout << endl;
+						break;
+					}
 					else { cout << "Please answer in y or n: "; }
 				}
 			}
@@ -109,7 +122,7 @@ int main()
 		memory,
 		cache);
 
-	thread termination_thread(wait_for_termination_input,
+	thread termination_thread(wait_for_termination_input, ref(threads_vec),
 		ref(cv));
 	termination_thread.join();
 

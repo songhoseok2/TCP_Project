@@ -67,7 +67,7 @@ void accept_requests(vector<thread>& threads_vec,
 			cout << "ERROR number: " << WSAGetLastError() << endl;
 			break;
 		}
-		cout << client_socket->IP_address << "_" << this_thread::get_id() << " requested " << request_buff << "." << endl;
+		cout << "Client " << client_socket->IP_address << "_" << this_thread::get_id() << " requested " << request_buff << "." << endl;
 
 		char request_acceptance_result_buff[2];
 		request_acceptance_result_buff[0] = 'y';
@@ -138,7 +138,7 @@ void wait_for_clients(vector<thread>& threads_vec,
 		}
 
 		set_client_connection_info(&client_socket);
-		cout << "Client IP Address " << client_socket.IP_address << "_" << this_thread::get_id() << " has connected to Port " << client_socket.port_num << "." << endl;
+		cout << "Client IP Address " << client_socket.IP_address << "_" << this_thread::get_id() << " has connected to Port " << client_socket.port_num << "." << endl << endl;
 
 		thread_vec_mutex.lock();
 		//new thread for each client connection
@@ -148,7 +148,6 @@ void wait_for_clients(vector<thread>& threads_vec,
 				memory,
 				cache));
 		thread_vec_mutex.unlock();
-
 		connected_client_sockets[threads_vec.back().get_id()] = client_socket;
 	}
 }
@@ -166,8 +165,8 @@ void send_process_result(const char process_result_buff[2],
 	if (is_disconnected(bytes_sent)) { return; }
 	else if (bytes_sent == SOCKET_ERROR)
 	{
-		cout << "ERROR in sending request result to client " << client_socket->IP_address << "_" << this_thread::get_id() << ". Exiting." << endl;
-		cout << "ERROR number: " << WSAGetLastError() << endl;
+		cout << "ERROR in sending request result to client " << client_socket->IP_address << "_" << this_thread::get_id() << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl << endl;
 		return;
 	}
 
@@ -182,7 +181,7 @@ int receive_account_number(socket_info* client_socket)
 	else if (bytes_received == SOCKET_ERROR)
 	{
 		cout << "ERROR in receiving account_number from client " << client_socket->IP_address << "_" << this_thread::get_id() << endl;
-		cout << "ERROR number: " << WSAGetLastError() << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl << endl;
 		char process_result_buff[2];
 		process_result_buff[0] = 'f';
 		process_result_buff[1] = '\0';
@@ -201,7 +200,7 @@ double receive_new_balance(socket_info* client_socket)
 	else if (bytes_received == SOCKET_ERROR)
 	{
 		cout << "ERROR in receiving account_number from client " << client_socket->IP_address << "_" << this_thread::get_id() << endl;
-		cout << "ERROR number: " << WSAGetLastError() << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl << endl;
 		char process_result_buff[2];
 		process_result_buff[0] = 'f';
 		process_result_buff[1] = '\0';
@@ -222,13 +221,13 @@ char receive_message(socket_info* client_socket)
 	if (is_disconnected(bytes_received)) { return 'd'; }
 	else if (bytes_received == SOCKET_ERROR)
 	{
-		cout << "ERROR in receiving message from client " << client_socket->IP_address << "_" << this_thread::get_id() << ". Exiting." << endl;
-		cout << "ERROR number: " << WSAGetLastError() << endl;
+		cout << "ERROR in receiving message from client " << client_socket->IP_address << "_" << this_thread::get_id() << endl;
+		cout << "ERROR number: " << WSAGetLastError() << endl << endl;
 		return 'f'; //failed to receive the message
 	}
 	else if (string(msg_buff) == "ABORT")
 	{
-		cout << client_socket->IP_address << "_" << this_thread::get_id() << " aborted the message transmission. " << endl;
+		cout << client_socket->IP_address << "_" << this_thread::get_id() << " aborted the message transmission. " << endl << endl;
 		return 'a';
 	}
 
@@ -244,6 +243,7 @@ void process_request_m(socket_info* client_socket)
 	if (process_result_buff[0] != 'd' && process_result_buff[0] != 'a')
 	{
 		send_process_result(process_result_buff, client_socket);
+		cout << endl;
 	}
 }
 
@@ -266,7 +266,7 @@ void process_request_r(socket_info* client_socket,
 	if (account_number == -2) { return; }
 	else if (account_number == -1)
 	{
-		cout << "Client " << client_socket->IP_address << "_" << this_thread::get_id() << " aborted the access to the accounts." << endl;
+		cout << "Client " << client_socket->IP_address << "_" << this_thread::get_id() << " aborted the access to the accounts." << endl << endl;
 		return;
 	}
 	cout << "Client " << client_socket->IP_address << "_" << this_thread::get_id() << " requested the balance of account number " << account_number << "." << endl;
@@ -282,12 +282,12 @@ void process_request_r(socket_info* client_socket,
 		if (is_disconnected(bytes_sent)) { return; }
 		else if (bytes_sent == SOCKET_ERROR)
 		{
-			cout << "ERROR in sending requested balance to client " << client_socket->IP_address << "_" << this_thread::get_id() << ". Exiting." << endl;
-			cout << "ERROR number: " << WSAGetLastError() << endl;
+			cout << "ERROR in sending requested balance to client " << client_socket->IP_address << "_" << this_thread::get_id() << endl;
+			cout << "ERROR number: " << WSAGetLastError() << endl << endl;
 			return;
 		}
 
-		cout << "Sent requested_balance of $" << requested_balance << " to client " << client_socket->IP_address << "_" << this_thread::get_id() << "." << endl;
+		cout << "Sent requested_balance of $" << requested_balance << " to client " << client_socket->IP_address << "_" << this_thread::get_id() << "." << endl << endl;
 	}
 }
 
@@ -301,7 +301,7 @@ void process_request_u(socket_info* client_socket,
 	if (account_number == -2) { return; }
 	else if (account_number == -1)
 	{
-		cout << "Client " << client_socket->IP_address << "_" << this_thread::get_id() << " aborted the access to the accounts." << endl;
+		cout << "Client " << client_socket->IP_address << "_" << this_thread::get_id() << " aborted the access to the accounts." << endl << endl;
 		return;
 	}
 	double new_balance = receive_new_balance(client_socket);
@@ -310,6 +310,7 @@ void process_request_u(socket_info* client_socket,
 	process_result_buff[0] = write_account(account_number, new_balance, memory, cache);
 	process_result_buff[1] = '\0';
 	send_process_result(process_result_buff, client_socket);
+	cout << endl;
 }
 
 void process_requests(const char current_request,
