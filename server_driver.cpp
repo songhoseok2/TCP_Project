@@ -40,13 +40,12 @@ void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[
 	}
 }
 
-void wait_for_termination_input(thread& client_connection_thread,
-	vector<socket_info>& connected_client_sockets,
-	condition_variable& cv)
+void wait_for_termination_input(condition_variable& cv)
 {
 	mutex temp_mutex;
 	unique_lock<mutex> stuff(temp_mutex);
 	cv.wait(stuff);
+	//wait because this message should appear AFTER wait_for_clients' message display first
 	cout << "Enter ESC to terminate this server." << endl;
 
 	while (true)
@@ -56,9 +55,9 @@ void wait_for_termination_input(thread& client_connection_thread,
 			if (connected_client_sockets.empty()) { return; }
 			else
 			{
-				for (const socket_info& current_socket : connected_client_sockets)
+				for (map<thread::id, socket_info>::iterator it = connected_client_sockets.begin(); it != connected_client_sockets.end(); ++it)
 				{
-					cout << "IP Adress: " << current_socket.IP_address << " on port: " << current_socket.port_num << endl;
+					cout << "IP Adress: " << it->second.IP_address << " on port: " << it->second.port_num << endl;
 				}
 				cout << "There are " << connected_client_sockets.size() << " socket(s) still connected to this server." << endl;
 				cout << "It is recommended that you terminate the server after all clients finish their operations and disconnect from this server." << endl;
@@ -68,7 +67,10 @@ void wait_for_termination_input(thread& client_connection_thread,
 				{
 					if (answer == "y")
 					{
-						for (socket_info& current_socket : connected_client_sockets) { closesocket(current_socket.sock); }
+						for (map<thread::id, socket_info>::iterator it = connected_client_sockets.begin(); it != connected_client_sockets.end(); ++it)
+						{
+							closesocket(it->second.sock);
+						}
 						return;
 					}
 					else if (answer == "n") { break; }
@@ -81,8 +83,7 @@ void wait_for_termination_input(thread& client_connection_thread,
 
 int main()
 {
-	vector<socket_info> connected_client_sockets;
-	vector<thread> socket_threads;
+	vector<thread> threads_vec;
 	double memory[NUMMEMORY];
 	account_cache_set cache[CACHENUMOFSETS];
 	initialize_cache_and_mem(memory, cache);
@@ -91,30 +92,26 @@ int main()
 	initialize_winsock();
 	socket_info listening_socket = create_listening_socket();
 
-	if (bind(listening_socket.sock, (sockaddr*)& listening_socket.sock_addr, sizeof(listening_socket.sock_addr)) < 0)
+	//if using namespace std AND <functional> library is included this could cause error
+	//specify to use bind from global namespace.
+	if (::bind(listening_socket.sock, (sockaddr*)& listening_socket.sock_addr, sizeof(listening_socket.sock_addr)) < 0)
 	{
 		exit_with_err_msg("Binding listening socket failed.");
 	}
 
 	listen(listening_socket.sock, SOMAXCONN);
-	mutex master_mutex; //mutex and shared data protections will be segmented and implemented properly in the future
 	
 	condition_variable cv;
 	thread client_connection_thread(wait_for_clients,
-		ref(connected_client_sockets),
-		ref(socket_threads),
+		ref(threads_vec),
 		ref(listening_socket),
-		ref(master_mutex),
 		ref(cv),
 		memory,
 		cache);
 
 	thread termination_thread(wait_for_termination_input,
-		ref(client_connection_thread),
-		ref(connected_client_sockets), 
 		ref(cv));
 	termination_thread.join();
-
 
 	WSACleanup();
 	update_balance_data(memory);

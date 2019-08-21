@@ -132,18 +132,22 @@ bool is_valid_balance(const string input)
 
 double get_new_balance()
 {
-	string new_balance;
+	string new_balance_str;
 
 	cout << "Please enter the amount of the new balance: $";
-	while (getline(cin, new_balance))
+	while (getline(cin, new_balance_str))
 	{
-		if (is_valid_balance(new_balance)) { break; }
+		if (new_balance_str.empty())
+		{
+			cout << "ERROR: Account number is empty. Please re-enter: ";
+		}
+		else if (is_valid_balance(new_balance_str)) { break; }
 		else
 		{
-			cout << new_balance << " isn't a correct currency. Please re-enter: $";
+			cout << new_balance_str << " isn't a correct currency. Please re-enter: $";
 		}
 	}
-	return stod(new_balance);
+	return stod(new_balance_str);
 }
 
 bool send_request(socket_info& server_socket, const char request)
