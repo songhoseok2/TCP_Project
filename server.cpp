@@ -49,7 +49,8 @@ void accept_requests(vector<thread>& threads_vec,
 	account_cache_set cache[CACHENUMOFSETS])
 {
 	socket_info* client_socket = &connected_client_sockets[this_thread::get_id()];
-
+	cout << "Client IP Address " << client_socket->IP_address << "_" << this_thread::get_id() << " has connected to Port " << client_socket->port_num << "." << endl << endl;
+	
 	char request_buff[2];
 	for (ZeroMemory(request_buff, 2); true; ZeroMemory(request_buff, 2))
 	{
@@ -138,7 +139,6 @@ void wait_for_clients(vector<thread>& threads_vec,
 		}
 
 		set_client_connection_info(&client_socket);
-		cout << "Client IP Address " << client_socket.IP_address << "_" << this_thread::get_id() << " has connected to Port " << client_socket.port_num << "." << endl << endl;
 
 		thread_vec_mutex.lock();
 		//new thread for each client connection

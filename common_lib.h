@@ -11,9 +11,12 @@
 #define NUMMEMORY 10000
 
 //small numbers for now for debugging purpose
-#define TAGBLOCKSIZE 4
-#define CACHESETBLOCKSIZE 2
-#define CACHENUMOFSETS 5
+#define TAGBLOCKSIZE 5
+#define CACHESETBLOCKSIZE 8
+
+//There is a mutex for each set so NUMOFSETS must be largest
+// for the mutual exclusion to be more effifcient
+#define CACHENUMOFSETS 30
 
 using namespace std;
 
