@@ -19,9 +19,11 @@ using namespace std;
 //much easier for mutual exclusion
 extern map<thread::id, socket_info> connected_client_sockets;
 
-socket_info create_listening_socket();
-
 void client_disconnection_message(socket_info* const client_socket);
+
+void server_error_message(const string message, socket_info* client_socket);
+
+socket_info create_listening_socket();
 
 void set_client_connection_info(socket_info* client_socket);
 

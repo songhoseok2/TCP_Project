@@ -15,6 +15,7 @@ map<thread::id, socket_info> connected_client_sockets;
 mutex cache_set_mutex[CACHENUMOFSETS];
 mutex memory_mutex[NUMMEMORY / TAGBLOCKSIZE];
 mutex thread_vec_mutex;
+mutex msg_mutex;
 
 void read_in_balance_data(double memory[NUMMEMORY])
 {
@@ -27,7 +28,7 @@ void read_in_balance_data(double memory[NUMMEMORY])
 void update_balance_data(double memory[NUMMEMORY])
 {
 	ofstream outfile("balance_data.txt");
-	for (int i = 0; memory[i] >= 0; ++i)
+	for (int i = 0; i < NUMMEMORY; ++i)
 	{
 		outfile << fixed << setprecision(2) << memory[i] << endl;
 	}
@@ -125,6 +126,7 @@ int main()
 
 	thread termination_thread(wait_for_termination_input, ref(threads_vec),
 		ref(cv));
+	client_connection_thread.detach();
 	termination_thread.join();
 
 	WSACleanup();
