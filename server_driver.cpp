@@ -13,8 +13,7 @@ using namespace std;
 map<thread::id, socket_info> connected_client_sockets;
 
 mutex cache_set_mutex[CACHENUMOFSETS];
-vector<mutex[CACHESETBLOCKSIZE]> cache_tag_block_mutex_vec(CACHENUMOFSETS);
-mutex memory_mutex[TAGBLOCKSIZE];
+mutex memory_mutex[NUMMEMORY / TAGBLOCKSIZE];
 mutex thread_vec_mutex;
 
 void read_in_balance_data(double memory[NUMMEMORY])

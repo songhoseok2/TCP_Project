@@ -42,10 +42,14 @@ void update_LRU(const int most_recent_tag_index, account_cache_set& current_set)
 
 void write_to_memory(const int set_id, const int tag_index, double memory[NUMMEMORY], account_cache_set cache[CACHENUMOFSETS])
 {
+	int memory_mutex_index = get_account_number(set_id, cache[set_id].tag_blocks[tag_index].tag_id, 0) / TAGBLOCKSIZE;
+	memory_mutex[memory_mutex_index].lock();
 	for (int i = 0; i < TAGBLOCKSIZE; ++i)
 	{
 		memory[get_account_number(set_id, cache[set_id].tag_blocks[tag_index].tag_id, i)] = cache[set_id].tag_blocks[tag_index].cache_lines[i];
 	}
+	memory_mutex[memory_mutex_index].unlock();
+
 	cache[set_id].tag_blocks[tag_index].dirty = false;
 }
 
@@ -82,6 +86,7 @@ void load_onto_cache(const int account_number, double memory[NUMMEMORY], account
 	if (cache[set_id].usage_deque.empty()) { is_tag_block_loaded = false; }
 
 	int cache_tag_index = get_cache_tag_index(get_tag_id(account_number), cache[set_id].tag_blocks);
+
 	//tag miss
 	if (cache_tag_index == -1) { is_tag_block_loaded = false; }
 	if (!is_tag_block_loaded) { cache_tag_index = load_tag_block(account_number, memory, cache); }
@@ -104,14 +109,18 @@ char write_account(const int account_number,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
 {
-	load_onto_cache(account_number, memory, cache);
 	int set_id = get_set_id(account_number);
+
+	cache_set_mutex[set_id].lock();
+	load_onto_cache(account_number, memory, cache);
 	int cache_tag_index = get_cache_tag_index(get_tag_id(account_number), cache[set_id].tag_blocks);
+	
 	//if the account balance is already the inteded new_balance, there is no need for an update.
 	if (cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] == new_balance) { return 'n'; }
 	
 	cache[set_id].tag_blocks[cache_tag_index].cache_lines[get_tag_block_offset(account_number)] = new_balance;
 	cache[set_id].tag_blocks[cache_tag_index].dirty = true;
 	update_LRU(cache_tag_index, cache[set_id]);
+	cache_set_mutex[set_id].unlock();
 	return 's';
 }

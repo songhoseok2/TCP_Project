@@ -20,8 +20,7 @@ Cache system design:
 */
 
 extern mutex cache_set_mutex[CACHENUMOFSETS];
-extern vector<mutex[CACHESETBLOCKSIZE]> cache_tag_block_mutex_vec;
-extern mutex memory_mutex[TAGBLOCKSIZE];
+extern mutex memory_mutex[NUMMEMORY / TAGBLOCKSIZE];
 extern mutex thread_vec_mutex;
 
 int get_tag_block_offset(const int account_number);

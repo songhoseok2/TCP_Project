@@ -251,8 +251,13 @@ double read_account(const int account_number,
 	double memory[NUMMEMORY],
 	account_cache_set cache[CACHENUMOFSETS])
 {
+	int set_id = get_set_id(account_number);
+
+	cache_set_mutex[set_id].lock();
 	load_onto_cache(account_number, memory, cache);
 	double requested_balance = read_from_cache(account_number, cache);
+	cache_set_mutex[set_id].unlock();
+
 	return requested_balance;
 }
 
