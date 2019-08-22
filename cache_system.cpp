@@ -5,17 +5,16 @@ using namespace std;
 
 int get_tag_block_offset(const int account_number) { return account_number % TAGBLOCKSIZE; }
 
-int get_tag_id(const int account_number) { return (account_number - get_tag_block_offset(account_number)) / (CACHENUMOFSETS * SETBLOCKSIZE * TAGBLOCKSIZE); }
+int get_tag_id(const int account_number) { return (account_number - get_tag_block_offset(account_number)) / (CACHENUMOFSETS * TAGBLOCKSIZE); }
 
-//(account_number - get_tag_block_offset(account_number) - get_tag_id(account_number) * CACHENUMOFSETS * SETBLOCKSIZE * TAGBLOCKSIZE) / (SETBLOCKSIZE * TAGBLOCKSIZE); }
-int get_set_id(const int account_number) { return (account_number / (SETBLOCKSIZE * TAGBLOCKSIZE)) % CACHENUMOFSETS; }
+int get_set_id(const int account_number) { return (account_number / TAGBLOCKSIZE) % CACHENUMOFSETS; }
 
-int get_account_number(const int set_id, const int tag_id, const int tag_block_offset) { return set_id * CACHENUMOFSETS + tag_id * SETBLOCKSIZE + tag_block_offset; }
+int get_account_number(const int set_id, const int tag_id, const int tag_block_offset) { return set_id * CACHENUMOFSETS + tag_id * CACHESETBLOCKSIZE + tag_block_offset; }
 
-int get_cache_tag_index(const int tag_id, cache_tag blocks[SETBLOCKSIZE])
+int get_cache_tag_index(const int tag_id, cache_tag blocks[CACHESETBLOCKSIZE])
 {
-	auto it = find_if(blocks, blocks + SETBLOCKSIZE, [tag_id](cache_tag current_tag) { return current_tag.tag_id == tag_id; });
-	return it != (blocks + SETBLOCKSIZE) ? (it - blocks) : -1;
+	auto it = find_if(blocks, blocks + CACHESETBLOCKSIZE, [tag_id](cache_tag current_tag) { return current_tag.tag_id == tag_id; });
+	return it != (blocks + CACHESETBLOCKSIZE) ? (it - blocks) : -1;
 }
 
 void update_LRU(const int most_recent_tag_index, account_cache_set& current_set)
@@ -26,11 +25,12 @@ void update_LRU(const int most_recent_tag_index, account_cache_set& current_set)
 	if (current_set.usage_deque.empty()) { current_set.usage_deque.push_back(most_recent_tag_index); }
 
 	//if not all tag blocks are being used, LRU(next block to use) should be an empty one so that eviction isn't necessary
-	if (current_set.usage_deque.size() < SETBLOCKSIZE)
+	if (current_set.usage_deque.size() < CACHESETBLOCKSIZE)
 	{
 		//find an empty tag_block and push_front
-		cache_tag* it = find_if(current_set.tag_blocks, current_set.tag_blocks + SETBLOCKSIZE, [](cache_tag current_tag_block) { return current_tag_block.tag_id == -1; });
-		if (it != current_set.tag_blocks + SETBLOCKSIZE) { current_set.usage_deque.push_front(it - current_set.tag_blocks); }
+		cache_tag* it = find_if(current_set.tag_blocks, current_set.tag_blocks + CACHESETBLOCKSIZE, 
+			[](cache_tag current_tag_block) { return current_tag_block.tag_id == -1; });
+		if (it != current_set.tag_blocks + CACHESETBLOCKSIZE) { current_set.usage_deque.push_front(it - current_set.tag_blocks); }
 		else { assert(false); } //this is wrong. in this code block there must be an empty tag block.
 	}
 
@@ -60,6 +60,7 @@ int load_tag_block(const int account_number, double memory[NUMMEMORY], account_c
 	{
 		write_to_memory(set_id, LRU_index, memory, cache);
 	}
+
 	int current_account_tag_block_offset = get_tag_block_offset(account_number);
 	int beginning_tag_account_number = account_number - current_account_tag_block_offset;
 	for (int i = 0; i < TAGBLOCKSIZE; ++i)

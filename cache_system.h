@@ -19,7 +19,9 @@ Cache system design:
 	-	Dirty-bit
 */
 
-extern mutex read_mutex;
+extern mutex cache_set_mutex[CACHENUMOFSETS];
+extern vector<mutex[CACHESETBLOCKSIZE]> cache_tag_block_mutex_vec;
+extern mutex memory_mutex[TAGBLOCKSIZE];
 extern mutex thread_vec_mutex;
 
 int get_tag_block_offset(const int account_number);
@@ -30,7 +32,7 @@ int get_set_id(const int account_number);
 
 int get_account_number(const int set_index, const int tag_id, const int tag_block_offset);
 
-int get_cache_tag_index(const int tag_id, cache_tag blocks[SETBLOCKSIZE]);
+int get_cache_tag_index(const int tag_id, cache_tag blocks[CACHESETBLOCKSIZE]);
 
 void update_LRU(const int most_recent_tag_index, account_cache_set& current_set);
 

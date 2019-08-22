@@ -12,7 +12,9 @@ using namespace std;
 
 map<thread::id, socket_info> connected_client_sockets;
 
-mutex read_mutex;
+mutex cache_set_mutex[CACHENUMOFSETS];
+vector<mutex[CACHESETBLOCKSIZE]> cache_tag_block_mutex_vec(CACHENUMOFSETS);
+mutex memory_mutex[TAGBLOCKSIZE];
 mutex thread_vec_mutex;
 
 void read_in_balance_data(double memory[NUMMEMORY])
@@ -38,7 +40,7 @@ void initialize_cache_and_mem(double memory[NUMMEMORY], account_cache_set cache[
 	fill(memory, memory + NUMMEMORY, -1);
 	for (int i = 0; i < CACHENUMOFSETS; ++i)
 	{
-		for (int k = 0; k < SETBLOCKSIZE; ++k)
+		for (int k = 0; k < CACHESETBLOCKSIZE; ++k)
 		{
 			fill(cache[i].tag_blocks[k].cache_lines, cache[i].tag_blocks[k].cache_lines + TAGBLOCKSIZE, -1);
 		}

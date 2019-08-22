@@ -12,7 +12,7 @@
 
 //small numbers for now for debugging purpose
 #define TAGBLOCKSIZE 4
-#define SETBLOCKSIZE 2
+#define CACHESETBLOCKSIZE 2
 #define CACHENUMOFSETS 5
 
 using namespace std;
@@ -43,7 +43,7 @@ struct account_cache_set
 	//for the purpose of LRU. most recent tagblock is at the back. LRU is at the front.
 	deque<int> usage_deque;
 
-	cache_tag tag_blocks[SETBLOCKSIZE];
+	cache_tag tag_blocks[CACHESETBLOCKSIZE];
 };
 
 void initialize_winsock();
